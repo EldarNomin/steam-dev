@@ -78,8 +78,8 @@ namespace CosmicCatch.Editor
         {
             public string editorVersion;
             public string result;
-            public uint errors;
-            public uint warnings;
+            public int errors;
+            public int warnings;
             public ulong bytes;
             public double seconds;
             public string output;
