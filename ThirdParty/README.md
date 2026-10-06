@@ -13,6 +13,7 @@ Staging-зона лицензированных ресурсов до controlled
 | `kenney_prototype-textures` | kenney.nl/assets/prototype-textures | 1.0 (2020-04-08) | CC0 | Серые/цветные тайлы для грейбокс-сцен |
 | `kenney_sci-fi-sounds` | kenney.nl/assets/sci-fi-sounds | 1.0 (2020-10-11) | CC0 | Электроника, тревоги, окружение |
 | `kenney_interface-sounds` | kenney.nl/assets/interface-sounds | 1.0 (2020-02-11) | CC0 | UI: клики, подтверждения, отказы |
+| `quaternius_cute-monsters` | quaternius.com/packs/cutemonsters.html (зеркало: GitHub `nginetechnologies/pack-zoo-character.nplugin`) | 2021 | CC0 | Существа: краб (DEV-003), слизень и кандидат в зверя (DEV-009), анимации FBX |
 
 Kenney-лицензия: свободное использование в личных, образовательных и коммерческих
 проектах; указание авторства приветствуется, но не обязательно. Оригинальный текст —
