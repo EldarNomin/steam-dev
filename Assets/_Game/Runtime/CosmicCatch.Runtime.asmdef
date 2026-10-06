@@ -1,0 +1,6 @@
+{
+  "name": "CosmicCatch.Runtime",
+  "rootNamespace": "CosmicCatch",
+  "references": [],
+  "autoReferenced": true
+}
