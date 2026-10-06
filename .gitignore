@@ -1,0 +1,49 @@
+# Unity generated
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]serSettings/
+[Mm]emoryCaptures/
+[Rr]ecordings/
+
+# IDE / editors
+.vs/
+.idea/
+.vscode/
+*.csproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Unity crash reports
+sysinfo.txt
+*.stackdump
+crashlytics-build.properties
+
+# OS junk
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Builds artefacts
+*.apk
+*.aab
+*.unitypackage
+*.app
+*.exe
+
+# Never ignore Unity project identity
+!ProjectSettings/ProjectVersion.txt
+!Packages/manifest.json
+!Packages/packages-lock.json
