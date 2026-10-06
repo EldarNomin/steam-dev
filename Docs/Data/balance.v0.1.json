@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "balanceVersion": "0.1.0",
+  "status": "design-not-playtested",
+  "players": {"min": 1, "max": 4, "health": 100, "soloSelfRevives": 1, "reviveSeconds": 3},
+  "movement": {"speed": 5, "carrySpeed": 3.5, "jumpHeight": 1.2, "gravity": 9.81, "lowGravity": 3, "gravityBlendSeconds": 0.3},
+  "rope": {"range": 15, "breakDistance": 18, "breakTension": 1, "breakGraceSeconds": 0.8, "brokenCooldownSeconds": 1.5, "releaseCooldownSeconds": 0.5, "maxPerPlayer": 1, "maxPerCreature": 4, "combinedForceCapBaseMultiplier": 2, "chargeMax": 100, "reelDrainPerSecond": 6, "chargeRecoveryPerSecond": 12, "recoveryDelaySeconds": 1, "obstructedReleaseSeconds": 1},
+  "capture": {"baseResistance": 100, "weakPhaseDrainPerSecond": 12, "recoveryDelaySeconds": 3, "recoveryPerSecond": 8, "subduedSeconds": 8, "resistanceAfterSubdued": 40, "distance": 2, "loadSeconds": 1.5},
+  "stun": {"resistanceDamage": 35, "healthDamage": 10, "cooldownSeconds": 4},
+  "playerDamage": {"crab": 20, "inflater": 10, "slime": 20, "elite_crab": 30, "contactProtectionSeconds": 1, "crabWarnSeconds": 1},
+  "spawns": {"RockBelt": {"crab": 6, "inflater": 3, "inflaterAfterContract": "EC-02"}, "GasCrater": {"crab": 3, "inflater": 2, "slime": 3, "elite_crab": 1, "eliteRequiresActiveOrCompletedContract": "EC-06"}},
+  "cargo": {"slots": 4, "normalSlots": 1, "eliteSlots": 2, "departureSeconds": 10},
+  "economy": {"personalShare": 0.3, "deadMultiplier": 0.6, "aliveBaseMultiplier": 1, "aliveHealthBonus": 0.5, "styleBonusCap": 0.2, "rounding": "floor-per-specimen-then-distribute"},
+  "style": [{"id": "AirHook", "bonus": 0.1, "minAirborneSeconds": 0.5}, {"id": "TeamRescue", "bonus": 0.1}],
+  "variants": [
+    {"id": "normal", "probability": 0.8, "valueMultiplier": 1, "resistanceMultiplier": 1},
+    {"id": "glowing", "probability": 0.15, "valueMultiplier": 2, "resistanceMultiplier": 1},
+    {"id": "massive", "probability": 0.05, "valueMultiplier": 1.5, "resistanceMultiplier": 1.5}
+  ],
+  "creatures": [
+    {"id": "crab", "baseValue": 100, "health": 100, "resistance": 100, "bait": "metal", "braceSeconds": 4, "braceCooldownSeconds": 5, "cargoBlockSeconds": 3, "cargoBlockCooldownSeconds": 12},
+    {"id": "inflater", "baseValue": 140, "health": 100, "resistance": 100, "bait": "organic", "warnSeconds": 2, "inflateSeconds": 4, "weakSeconds": 6, "maxLiftHeight": 3},
+    {"id": "slime", "baseValue": 200, "health": 100, "resistance": 100, "bait": "energy", "warnSeconds": 2, "dischargeRadius": 3, "dischargeCooldownSeconds": 8, "weakSeconds": 5, "scannerDisableSeconds": 2, "requiresInsulationAlive": true},
+    {"id": "elite_crab", "baseValue": 800, "health": 300, "resistance": 250, "bait": "metal", "slots": 2, "warnSeconds": 2, "variant": "normal"}
+  ],
+  "upgrades": [
+    {"id": "UP-ROPE-1", "cost": 120, "afterContract": "EC-01", "forceMultiplier": 1.25},
+    {"id": "UP-SCANNER", "cost": 200, "afterContract": "EC-02", "range": 15},
+    {"id": "UP-STUN", "cost": 300, "afterContract": "EC-02"},
+    {"id": "UP-INSULATION", "cost": 450, "afterContract": "EC-03"},
+    {"id": "UP-ROPE-2", "cost": 600, "afterContract": "EC-04", "requiresUpgrade": "UP-ROPE-1", "forceMultiplier": 1.5}
+  ],
+  "contracts": [
+    {"id": "EC-01", "species": "crab", "aliveCount": 2, "bonus": 100},
+    {"id": "EC-02", "species": "crab", "aliveCount": 2, "requiresUpgrade": "UP-ROPE-1", "bonus": 150},
+    {"id": "EC-03", "species": "inflater", "aliveCount": 3, "bonus": 200},
+    {"id": "EC-04", "species": "slime", "aliveCount": 2, "bonus": 250},
+    {"id": "EC-05", "species": "any_base", "aliveCount": 6, "bonus": 300},
+    {"id": "EC-06", "species": "elite_crab", "aliveCount": 1, "bonus": 600}
+  ],
+  "repeatContracts": [{"species": "crab", "aliveCount": 2, "bonus": 50}, {"species": "inflater", "aliveCount": 2, "bonus": 80}, {"species": "slime", "aliveCount": 1, "bonus": 100}],
+  "chance": {
+    "unlockAfterContract": "EC-01",
+    "wager": {"stakes": [10, 25, 50], "animationSeconds": 2, "expectedReturn": 0.95, "outcomes": [{"multiplier": 0, "probability": 0.4}, {"multiplier": 1, "probability": 0.35}, {"multiplier": 2, "probability": 0.2}, {"multiplier": 4, "probability": 0.05}]},
+    "capsule": {"cost": 100, "animationSeconds": 3, "rarePlusGuarantee": 10, "epicPlusGuarantee": 30, "tiers": [{"id": "common", "probability": 0.6, "duplicateCredits": 5, "directPrice": 80, "pool": ["COS-01", "COS-02", "COS-03", "COS-04"]}, {"id": "rare", "probability": 0.3, "duplicateCredits": 15, "directPrice": 250, "pool": ["COS-05", "COS-06"]}, {"id": "epic", "probability": 0.09, "duplicateCredits": 30, "directPrice": 700, "pool": ["COS-07", "COS-08"]}, {"id": "legendary", "probability": 0.01, "duplicateCredits": 60, "directPrice": 1500, "pool": ["COS-09"]}]}
+  },
+  "network": {"tickRate": 30, "prepareTimeoutSeconds": 30, "testRttMilliseconds": [0, 100, 200], "testJitterMilliseconds": 30, "testPacketLossPercent": 2, "recentTransactionsPerPlayer": 128},
+  "performanceTargets": {"resolution": "1920x1080", "preset": "medium", "fps": 60, "frameTimeP95Ms": 20, "processMemoryGiBMax": 4, "status": "unverified"}
+}
