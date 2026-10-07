@@ -7,6 +7,28 @@ import sys
 from pathlib import Path
 
 
+def code_mentions_unity_editor(source: str) -> bool:
+    """True when UnityEditor appears in actual code, not in comments."""
+
+    def strip_line_comment(line: str) -> str:
+        # Drop // comments while respecting quoted strings (e.g. "https://").
+        parts = line.split('"')
+        kept = []
+        for index, part in enumerate(parts):
+            if index % 2 == 1:  # inside a quoted string: keep verbatim
+                kept.append(part)
+                continue
+            comment = part.find("//")
+            kept.append(part if comment < 0 else part[:comment])
+            if comment >= 0:
+                break
+        return "".join(kept)
+
+    without_block_comments = re.sub(r"/\*.*?\*/", " ", source, flags=re.DOTALL)
+    code_lines = [strip_line_comment(line) for line in without_block_comments.splitlines()]
+    return re.search(r"\bUnityEditor\b", "\n".join(code_lines)) is not None
+
+
 def validate(root: Path, syntax: bool) -> list[str]:
     failures = []
     assets = root / "Assets"
@@ -52,13 +74,17 @@ def validate(root: Path, syntax: bool) -> list[str]:
         except (ValueError, KeyError):
             continue
 
-    package_assemblies = {"Unity.RenderPipelines.Core.Runtime", "Unity.RenderPipelines.Universal.Runtime"}
+    package_assemblies = {
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.InputSystem",
+    }
     for name, definition in assemblies.items():
         for reference in definition.get("references", []):
             if reference not in assemblies and reference not in package_assemblies:
                 failures.append(f"Review unrecognized assembly reference: {name} -> {reference}")
     for path in (assets / "_Game/Runtime").rglob("*.cs"):
-        if re.search(r"\bUnityEditor\b", path.read_text(encoding="utf-8")):
+        if code_mentions_unity_editor(path.read_text(encoding="utf-8")):
             failures.append(f"Runtime depends on UnityEditor: {path.relative_to(root)}")
 
     documents = [root / "README.md", *(root / "Docs").rglob("*.md")]

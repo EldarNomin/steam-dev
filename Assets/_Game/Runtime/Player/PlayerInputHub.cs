@@ -8,11 +8,15 @@ namespace CosmicCatch.Player
     /// Owns the player's Input System actions. Actions are built in code (no
     /// .inputactions asset) so DEV-006 can replace the source of movement data
     /// with an authoritative network model without touching UI or settings.
-    /// One owner per player; disposing releases only the actions built here.
+    /// Two maps: gameplay (move/look/jump/interact) and System (menu toggle).
+    /// The System map stays enabled in menus so Esc keeps closing them; only
+    /// the gameplay map is gated. One owner per player; disposing releases
+    /// only the actions built here.
     /// </summary>
     public sealed class PlayerInputHub : IDisposable
     {
         private readonly InputActionAsset asset;
+        private readonly InputActionMap gameplay;
         private readonly InputAction move;
         private readonly InputAction look;
         private readonly InputAction jump;
@@ -24,9 +28,9 @@ namespace CosmicCatch.Player
             // InputActionAsset is a ScriptableObject: the plain constructor
             // throws in the player build.
             asset = ScriptableObject.CreateInstance<InputActionAsset>();
-            var map = asset.AddActionMap("Gameplay");
+            gameplay = asset.AddActionMap("Gameplay");
 
-            move = map.AddAction("Move", InputActionType.Value);
+            move = gameplay.AddAction("Move", InputActionType.Value);
             move.AddCompositeBinding("2DVector")
                 .With("Up", "<Keyboard>/w").With("Down", "<Keyboard>/s")
                 .With("Left", "<Keyboard>/a").With("Right", "<Keyboard>/d");
@@ -34,24 +38,24 @@ namespace CosmicCatch.Player
                 .With("Up", "<Keyboard>/upArrow").With("Down", "<Keyboard>/downArrow")
                 .With("Left", "<Keyboard>/leftArrow").With("Right", "<Keyboard>/rightArrow");
 
-            look = map.AddAction("Look", InputActionType.Value, "<Mouse>/delta");
+            look = gameplay.AddAction("Look", InputActionType.Value, "<Mouse>/delta");
+            jump = gameplay.AddAction("Jump", InputActionType.Button, "<Keyboard>/space");
+            interact = gameplay.AddAction("Interact", InputActionType.Button, "<Keyboard>/e");
 
-            jump = map.AddAction("Jump", InputActionType.Button, "<Keyboard>/space");
-            interact = map.AddAction("Interact", InputActionType.Button, "<Keyboard>/e");
-            menu = map.AddAction("Menu", InputActionType.Button, "<Keyboard>/escape");
+            menu = asset.AddActionMap("System").AddAction("Menu", InputActionType.Button, "<Keyboard>/escape");
 
             asset.Enable();
         }
 
-        /// <summary>False while a menu owns the cursor: gameplay input is gated off.</summary>
+        /// <summary>False while a menu owns the cursor: the gameplay map is disabled, Esc keeps working.</summary>
         public bool GameplayEnabled
         {
             set
             {
                 if (value)
-                    asset.Enable();
+                    gameplay.Enable();
                 else
-                    asset.Disable();
+                    gameplay.Disable();
             }
         }
 

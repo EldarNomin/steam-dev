@@ -1,9 +1,59 @@
 # DEV-002: локальная проверка
 
-Дата / исполнитель: 2026-10-07, локальный GLM (ZCode)
+Дата / исполнитель: 2026-10-07, локальный GLM (ZCode). Вторая итерация — исправления по ревью Codex (cf43a06).
 ОС / GPU / Editor: Windows 11 Pro (10.0.26200) / NVIDIA GeForce RTX 4070 (standalone) / Unity 6000.3.25f1 (e1dba0a9aba4)
-Ветка / base: `feature/DEV-002-player` от `37156ba` (проверенный DEV-001)
-Мост: Unity CLI batchmode; standalone-проверки с программным вводом (scancode-инъекции; vk-инъекции Raw Input не видит)
+Ветка / base: `feature/DEV-002-player` от `37156ba`; мерж main в ветку выполнен (см. конец файла)
+Мост: Unity CLI batchmode + GUI-прогоны через планировщик; standalone-ввод — scancode-инъекции (vk-инъекции Raw Input не видит)
+
+## Исправления по ревью Codex
+
+1. **Esc не закрывал меню** — `PlayerInputHub` отключал все actions, включая сам Esc. Исправлено: две карты — `Gameplay` (move/look/jump/interact) и `System` (menu); гейтинг отключает только Gameplay. Регрессия покрыта PlayMode-тестом `MenuGatingStopsMovementAndEscKeepsWorking` (Esc регистрируется при выключенном геймплее) и standalone-сценарием (Esc открыл → Esc закрыл).
+2. **Маркер зоны без материала** — материал создавался после назначения, повторный Setup не лечил. Исправлено: `EnsureZoneMarkerMaterial()` вызывается до `EnsureLowGravityZone()`; повторный Setup «лечит» пустую ссылку (`HealZoneMarker`). В сцене ссылка заполнена.
+3. **Ложные срабатывания валидатора** — `Tools/validate_project.py`: в известные пакетные сборки добавлен `Unity.InputSystem`; поиск `UnityEditor` в Runtime-коде игнорирует строчные и блочные комментарии (учёт кавычек). Прогон: `Repository checks: PASS`.
+4. **Некорректное подтверждение Editor Play Mode** — «белый» кадр убран, снят настоящий: Editor 6000.3.25f1, Boot, Play Mode (▶ активен, DontDestroyOnLoad), Game View от лица игрока: «КОСМОЛОВ», прицел, станция, корабль; Console — только внутренний баг `UnityEditor.Search.SearchDatabase` при старте. Захват — PrintWindow окна редактора (пассивно, без фокуса/ввода). Evidence: `Docs/Evidence/DEV-001/boot-playmode.png`, обновлён [DEV-001-LOCAL-RESULT](DEV-001-LOCAL-RESULT.md).
+
+Попутно найдено и исправлено реальным прогоном:
+- **`CharacterController.minMoveDistance`** — при высоком FPS гравитационный шаг за кадр меньше дефолтного 0.001 и контроллер не «садится» на пол (висит на 0.58). `minMoveDistance = 0` в `FirstPersonController.Awake`.
+- **`InputActionAsset`** в standalone обязан создаваться через `ScriptableObject.CreateInstance` (plain `new` кидал исключение — ввод не работал в сборке).
+- asmdef Runtime: +`Unity.InputSystem`; манифест: +`com.unity.test-framework` 1.6.0.
+- Спавн: игрок ставится лицом к грузовому терминалу в пределах 2 м (spawnPoint в definition, `SetStartPitch(-15°)`, идемпотентно при повторном Setup).
+
+## Автоматические проверки
+
+| Проверка | Статус | Как |
+|---|---|---|
+| EditMode (логика) | PASS 13/13 | нормализация движения (4), гравитационный blend 9.81↔3.0 за 0.3 с (4), interaction gate (3), сохранение настроек JSON (2) |
+| PlayMode (поведение, виртуальная клавиатура, изолированная сцена) | PASS 5/5 | ходьба 5 м за 1 с (измерено), диагональ не быстрее (измерено), прыжок apex 1.25 м + нет двойного прыжка (измерено), триггер зоны низкой гравитации, гейтинг меню + Esc при выключенном геймплее |
+| Компиляция | PASS | 0 ошибок после всех фиксов |
+| Windows build | PASS | Succeeded, 0 ошибок / 0 предупреждений |
+| Валидатор | PASS | `python Tools/validate_project.py` — PASS |
+
+Замечание к методике PlayMode-тестов: тесты выполняются в изолированной сцене (`SceneManager.CreateScene` + активная сцена), ввод — полные `KeyboardState`-события виртуальной клавиатуры; кнопочные `performed`-фазы проверяются в кадре ручного `InputSystem.Update()` ( editor-update тик иначе поглощает событие).
+
+## Standalone (Windows exe)
+
+| Проверка | Статус | Результат |
+|---|---|---|
+| Полный сценарий: спавн → E (ответ терминала) → прыжок → Esc (открыть) → Esc (закрыть) → «Выйти» | PASS (функционально) | Сценарий выполняется целиком, Player.log без исключений, выход по «Выйти» кодом 0 (подтверждено в двух прогонах) |
+| Кадры спавна/ходьбы/меню | PASS | [standalone-spawn](../Evidence/DEV-002/standalone-spawn.png) (прицел, «КОСМОЛОВ»), [standalone-walked](../Evidence/DEV-002/standalone-walked.png) (после 1.5 с W вид сместился), [standalone-menu](../Evidence/DEV-002/standalone-menu.png) (меню) |
+| Свежие кадры подсказки/ответа терминала | NOT DONE | Синтетический ввод остановлен: пользователь работает за машиной, кадры захватиля чужие окна. Подсказка/ответ проверяются вручную (чек-лист ниже) либо повторным прогоном при пустой машине |
+
+## Ручной чек-лист для Эльдара
+
+1. Спавн: подсказка «E — Проверить терминал» видна сразу; E → «Терминал готов»; дальше 2 м / за стеной / взгляд в сторону — подсказки нет.
+2. Прыжок: с земли — да, в воздухе — нет.
+3. Синяя зона: вход/выход/повторный вход, «вечного полёта» нет.
+4. Настройки: изменить → Сохранить → перезапуск exe → применились.
+5. Alt-tab: управление не залипает; повторные Esc/Play Mode — курсор корректен.
+
+TC-004/TC-028 не пройдены (скорость с грузом — DEV-005, полный MVP — не собран). Не объявлять их PASS.
+
+## Итог
+
+- Тесты: 18/18 (13 EditMode + 5 PlayMode).
+- Сборка: Succeeded 0/0; exe работает, Player.log чист.
+- Конфликты с main: устранены мержем (см. историю ветки).
+- Commit: см. ветку `feature/DEV-002-player` (PR №2).
 
 ## Что реализовано
 
@@ -15,44 +65,8 @@
 - `Tests/EditMode/`: 11 тестов — нормализация (4), гравитационный blend (4, поймали и исправили экспоненциальный недолёт: MoveTowards от текущей разницы не достигал цели за 0.3 с), interaction gate (3).
 - manifest: +`com.unity.test-framework` 1.6.0; asmdef Runtime: +`Unity.InputSystem`.
 
-## Проверки
-
-| Проверка | Статус | Фактический результат / evidence |
-|---|---|---|
-| Компиляция после изменений | PASS | 0 ошибок CS после фиксов (asmdef ref, Input System 1.20 API: конструктор `InputActionAsset`, отсутствие `Dispose`) |
-| EditMode-тесты | PASS | 11/11 (`Reports/editmode-tests.xml` локально) |
-| Диагональ не быстрее прямой | PASS | Тест `DiagonalIsNotFasterThanStraight` (clamp до единичной длины) |
-| Гравитация 9.81↔3.0 за 0.3 с | PASS (логика) | Тесты `GravityBlenderTests`; баг найден и исправлен |
-| Дальность/препятствие взаимодействия | PASS (логика) | `InteractionGateTests` + raycast-первый-хит |
-| Windows build | PASS | Succeeded 0/0 после всех фиксов |
-| Standalone: запуск, HUD | PASS | Кадр спавна: прицел, «КОСМОЛОВ», станция от первого лица |
-| Standalone: ходьба W | PASS | 1.5 с W → вид сместился (кадр `standalone-walked.png` отличается, игрок у грузовой зоны) |
-| Standalone: Esc-меню | PASS | Окно «Меню/Продолжить/Настройки/Выйти» (`standalone-menu.png`) |
-| Standalone: кнопка «Выйти» | PASS | Клик → процесс завершён, код 0 |
-| Standalone: Player.log | PASS | 0 исключений (после фикса `InputActionAsset` CreateInstance) |
-| Terminal E / близко/за стеной/удержание | NOT RUN (авто) | Требует наведения прицела; логика покрыта тестами gate; ручной чек-лист ниже |
-| Прыжок, повторный вход в Play Mode, alt-tab, сохранение настроек | NOT RUN (авто) | Ручной чек-лист для Эльдара |
-| Editor Play Mode геймплей | NOT RUN (авто) | Editor GUI требует ручного пропуска admin-диалога; движение/меню подтверждены в standalone |
-
-## Ошибки до/после
-
-- До: 21× CS0246/CS0234 (asmdef без `Unity.InputSystem`); CS1729/CS1061 (API Input System 1.20); `InputActionAsset must be instantiated using ScriptableObject.CreateInstance` (крашил rig в standalone — клавиши/меню не работали); GravityBlender недотягивал до цели за окно.
-- После: компиляция 0, тесты 11/11, standalone-проход без исключений.
-
 ## Evidence
 
-- `Docs/Evidence/DEV-002/standalone-spawn.png` — спавн, HUD, прицел
-- `Docs/Evidence/DEV-002/standalone-walked.png` — после 1.5 с W (вид изменился)
-- `Docs/Evidence/DEV-002/standalone-menu.png` — Esc-меню
-
-## Ручной чек-лист для Эльдара (Editor + standalone)
-
-1. Прыжок Space: с земли — да, в воздухе — нет; высота ~1.2 м.
-2. E: вплотную к терминалу — подсказка и «Терминал готов»; дальше 2 м, за стеной корпуса, взгляд в сторону — подсказки нет; удержание E — одно событие.
-3. Синяя зона: вход — прыжок выше/падение медленнее; выход — 0.3 с; повторный вход/выход; «вечного полёта» нет.
-4. Настройки: изменить чувствительность/инверсию/громкость → Сохранить → перезапустить exe → применились.
-5. Alt-tab и возврат: управление не залипает; повторные Esc/Play Mode — курсор и меню корректны.
-
-Не объявлять TC-004/TC-028 пройденными: скорость с грузом, полный MVP и сеть отсутствуют.
-
-Commit: см. ветку `feature/DEV-002-player` (PR №2).
+- `Docs/Evidence/DEV-002/standalone-spawn.png`, `standalone-walked.png`, `standalone-menu.png`
+- `Docs/Evidence/DEV-001/boot-playmode.png` (Editor Play Mode, общий с DEV-001)
+- Логи прогонов локальны (`Reports/`, в Git не входят)

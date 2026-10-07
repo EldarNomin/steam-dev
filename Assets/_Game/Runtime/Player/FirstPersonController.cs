@@ -30,6 +30,10 @@ namespace CosmicCatch.Player
         private void Awake()
         {
             body = GetComponent<CharacterController>();
+            // At very high frame rates the per-frame gravity step can fall
+            // below the default 0.001 threshold and the controller stops
+            // settling onto the ground.
+            body.minMoveDistance = 0f;
             if (definition != null)
                 blender = new GravityBlender(definition.gravityBlendSeconds);
         }
@@ -40,12 +44,26 @@ namespace CosmicCatch.Player
             input = playerInput;
         }
 
+        /// <summary>Sets the initial look pitch in degrees (negative = looking down).</summary>
+        public void SetStartPitch(float degrees)
+        {
+            pitch = Mathf.Clamp(degrees, -89f, 89f);
+            if (view != null)
+                view.localRotation = Quaternion.Euler(pitch, 0f, 0f);
+        }
+
         private void Start()
         {
             if (blender == null && definition != null)
                 blender = new GravityBlender(definition.gravityBlendSeconds);
             if (blender != null && definition != null)
                 blender.Reset(definition.gravity);
+            // Keep the editor-authored spawn pitch until the mouse moves.
+            if (view != null)
+            {
+                var euler = view.localEulerAngles.x;
+                pitch = euler > 180f ? euler - 360f : euler;
+            }
         }
 
         private void Update()

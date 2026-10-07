@@ -19,4 +19,4 @@ MonoBehaviour:
   gravityBlendSeconds: 0.3
   playAreaHalfExtent: 8.5
   killY: -20
-  spawnPoint: {x: 6, y: 1.2, z: -6}
+  spawnPoint: {x: 4, y: 0.05, z: 1.5}
