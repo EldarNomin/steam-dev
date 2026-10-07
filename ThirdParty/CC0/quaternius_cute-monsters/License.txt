@@ -1,0 +1,15 @@
+Quaternius — Cute Animated Monsters Pack
+https://quaternius.com/packs/cutemonsters.html
+
+License: CC0 (Creative Commons Zero / public domain)
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Взято из зеркала nginetechnologies/pack-zoo-character.nplugin (GitHub),
+папка Assets/Monsters/Rounded, формат FBX + PNG.
+
+Существа под виды из Docs/Specifications/HUNT.md:
+- Ball_Crab    — «краб» (DEV-003): риг SK_Ball_Crab + 10 анимаций
+- Ball_Slime   — «слизень» (DEV-009): риг + Attack/Death/Idle/Walk
+- Ball_Cactus  — кандидат в «зверя»-раздувателя (DEV-009): риг + 10 анимаций
+
+Slime без текстуры — материал цветом/вершинным цветом.
