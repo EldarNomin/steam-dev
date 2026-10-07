@@ -32,3 +32,14 @@
 - TC-028 (30 минут готового MVP), сеть, движение — вне рамок DEV-001.
 
 Commit с кодом/сценой / PR: см. commit `feat(DEV-001): verify baseline in real editor` в ветке `feature/DEV-001-unity-baseline`; PR №1.
+
+## Follow-up после ревью Codex (коммит a898271)
+
+| Проверка | PASS / FAIL / BLOCKED | Фактический результат / evidence |
+|---|---|---|
+| Устранение блокировки Editor системным диалогом | PASS (обход) | Сессия без UAC-разделения токенов: любой GUI-запуск Unity показывал «Administrator Privileges Detected». Обход: запуск через `schtasks /RL LIMITED` не понижал права; диалог закрывается клавиатурой — `SetForegroundWindow` + TAB + Space (фокус на «Continue»). Способ задокументирован в UnityProjectContext.md |
+| Boot в настоящем Play Mode (Editor) | PASS | Сцена открыта, Play Mode включён (▶ активен), Game View рендерит станцию/корабль/краба, материалы корректные (не розовые), Console без игровых ошибок. Единственное исключение в логе — внутренний индексатор `UnityEditor.Search.SearchDatabase` (стартовый, не относится к проекту). Русский IMGUI-оверлей в editor-кадр не попал (фокусозависим); его читаемость подтверждена кадром standalone (тот же `BaselineOverlay`). Evidence: [boot-playmode-editor.png](../Evidence/DEV-001/boot-playmode-editor.png) |
+| Active Input Handling → Input System (New) | PASS | Переключено через Editor (serialized field `activeInputHandler=1`, тот же механизм, что нативный Inspector), `ProjectSettings/ProjectSettings.asset` закоммичен; Editor перезапускался (каждый прогон — новый процесс) |
+| Пересборка Windows после переключения ввода | PASS | Succeeded, 0 ошибок/0 предупреждений; exe запущен, кнопка «Выйти» → exit 0, Player.log без исключений. Машинный отчёт: [windows-build-summary.json](../Evidence/DEV-001/windows-build-summary.json) |
+
+Не проверено и почему (без изменений): TC-028 (30 минут полного MVP) — NOT RUN; рендер Editor Play Mode снят захватом рабочего стола (CropGame View не выполнялся) — метод указан честно.
