@@ -103,7 +103,7 @@ jobs:
       - name: Install virtual display and input tooling
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends xvfb xdotool libgl1-mesa-dri libglx-mesa0
+          sudo apt-get install -y --no-install-recommends xvfb xdotool ffmpeg libgl1-mesa-dri libglx-mesa0
 
       - name: Cache Godot 4.5.1 binary
         uses: actions/cache@v4
