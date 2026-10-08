@@ -151,9 +151,9 @@ func _test_respawn_bounded(main: MainGame) -> void:
 		"count=%d" % main.spawner.field_count())
 	_check(max_seen <= CMConfig.MAX_ITEMS, "respawn: field count never exceeds cap",
 		"max=%d" % max_seen)
-	for i in 600:  # ещё минута времени — потолок держится
+	for i in 6000:  # ещё 10 минут симулированного времени — потолок держится
 		main.spawner.step(0.1)
-	_check(main.spawner.field_count() <= CMConfig.MAX_ITEMS, "respawn: cap holds over time",
+	_check(main.spawner.field_count() <= CMConfig.MAX_ITEMS, "respawn: cap holds over 10 simulated minutes",
 		"count=%d" % main.spawner.field_count())
 
 
