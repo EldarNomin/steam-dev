@@ -30,8 +30,9 @@ func _run_all() -> void:
 	_test_strength_unlocks_battery(main)
 	_test_magnet_frozen_in_dock(main)
 	_test_nut_guarantee(main)
-	_test_first_purchase_reachable(main)
+	_test_first_purchase_affordable()
 	_test_ui_inside_screen(main)
+	await _test_first_purchase_benchmark()
 
 	print("SUMMARY passed=%d failed=%d" % [passed, failed])
 	quit(1 if failed > 0 else 0)
@@ -188,22 +189,74 @@ func _test_unload_idempotent(main: MainGame) -> void:
 		"scrap=%d expected=%d" % [main.economy.scrap, scrap_before + gained])
 
 
-## Одновременные причины возврата (полный трюм + пустой заряд + ручная кнопка
-## + прямой повтор разгрузки) дают одну разгрузку и одно начисление.
+## Одновременные причины возврата при ПОЛНОМ трюме (F2 ревью CM-002):
+## старт каждого порядка — cargo = capacity − mass последнего предмета
+## и почти пустой заряд, так что все причины готовы одновременно.
+## Три порядка: (A) последний сбор завершает трюм; (B) раньше опустел
+## заряд; (C) раньше сработала ручная кнопка. После каждого: остальные
+## причины и повторные unload — no-op; ровно одна выплата, сброс груза
+## и заряда, сбор в DOCK невозможен.
 func _test_simultaneous_return_reasons_single_payout(main: MainGame) -> void:
+	var plate := _item_def(&"plate")
+	var pm := int(plate["mass"])
+	var pp := int(plate["price"])
+
+	# Порядок A: последний сбор (полный трюм) при уже пустом заряде.
 	main.launch()
-	var scrap_before := main.economy.scrap
-	var item := _make_item(main, &"plate")
-	main.register_collection(item)
-	var gained := int(item.price)
-	main.charge = 0.0  # зарядная причина готова simultанно с ручной
-	main.request_return()  # причина 1: ручная кнопка (внутри — авто-разгрузка)
-	main.advance_flight(1.0)  # причина 2: пустой заряд — уже DOCK, no-op
-	main.unload()  # причина 3: прямой повторный сигнал разгрузки
-	_check(main.economy.scrap == scrap_before + gained, "simultaneous: paid exactly once",
-		"scrap=%d expected=%d" % [main.economy.scrap, scrap_before + gained])
+	var scrap_a := main.economy.scrap
+	main.cargo_mass = main.capacity() - pm
+	main.cargo_value = 0
+	main.charge = 0.0
+	var a_last := _make_item(main, &"plate")
+	main.register_collection(a_last)  # причина 1: полный трюм → авто-возврат
+	main.advance_flight(1.0)  # причина 2: пустой заряд — уже DOCK
+	main.request_return()  # причина 3: ручная — уже DOCK
+	main.unload()  # повторные сигналы разгрузки
+	main.unload()
+	_check(main.economy.scrap == scrap_a + pp, "simultaneous A (full cargo first): single payout",
+		"got %d expected %d" % [main.economy.scrap, scrap_a + pp])
 	_check(main.cargo_mass == 0 and is_equal_approx(main.charge, main.max_charge()),
-		"simultaneous: cargo cleared and charge refilled", "")
+		"simultaneous A: cargo cleared, charge refilled", "")
+	var a_after := _make_item(main, &"nut")
+	main.register_collection(a_after)  # сбор после возврата в DOCK невозможен
+	_check(not a_after.collected and main.cargo_mass == 0, "simultaneous A: no collection in DOCK", "")
+	a_after.free()
+
+	# Порядок B: заряд опустошается раньше последнего сбора.
+	main.launch()
+	var scrap_b := main.economy.scrap
+	main.cargo_mass = main.capacity() - pm
+	main.cargo_value = pp  # стоимость уже собранного в трюме
+	main.charge = 0.05
+	main.advance_flight(0.1)  # причина 1: пустой заряд → авто-возврат и разгрузка
+	var b_item := _make_item(main, &"plate")
+	main.register_collection(b_item)  # причина 2: сбор в DOCK — no-op
+	main.request_return()  # причина 3
+	main.unload()
+	_check(main.economy.scrap == scrap_b + pp, "simultaneous B (empty charge first): single payout",
+		"got %d expected %d" % [main.economy.scrap, scrap_b + pp])
+	_check(main.cargo_mass == 0 and is_equal_approx(main.charge, main.max_charge()),
+		"simultaneous B: cargo cleared, charge refilled", "")
+	_check(not b_item.collected, "simultaneous B: item not collected in DOCK", "")
+	b_item.free()
+
+	# Порядок C: ручной возврат раньше остальных причин.
+	main.launch()
+	var scrap_c := main.economy.scrap
+	main.cargo_mass = main.capacity() - pm
+	main.cargo_value = pp
+	main.charge = 0.0
+	main.request_return()  # причина 1: ручная кнопка → авто-разгрузка
+	main.advance_flight(1.0)  # причина 2: пустой заряд — уже DOCK
+	var c_item := _make_item(main, &"plate")
+	main.register_collection(c_item)  # причина 3: сбор в DOCK — no-op
+	main.unload()
+	_check(main.economy.scrap == scrap_c + pp, "simultaneous C (manual first): single payout",
+		"got %d expected %d" % [main.economy.scrap, scrap_c + pp])
+	_check(main.cargo_mass == 0 and is_equal_approx(main.charge, main.max_charge()),
+		"simultaneous C: cargo cleared, charge refilled", "")
+	_check(not c_item.collected, "simultaneous C: item not collected in DOCK", "")
+	c_item.free()
 
 
 ## Покупка в DOCK применяет эффекты к магниту/ёмкости; в SALVAGE магазин отключён.
@@ -294,17 +347,76 @@ func _test_ui_inside_screen(main: MainGame) -> void:
 		"ui: HUD labels inside the window", "")
 
 
-## Первая покупка достижима за 60–120 с обычной игры: полный трюм гаек
-## стоит больше цены первой силы, а полный трюм собирается максимум за
-## два вылета по заряду из конфига.
-func _test_first_purchase_reachable(main: MainGame) -> void:
-	var cap := main.capacity()
-	var nut := _item_def(&"nut")
-	var full_nut_value: int = int(nut["price"]) * int(floor(cap / float(nut["mass"])))
+## Арифметика доступности первой покупки (НЕ измерение времени): полный трюм
+## гаек покрывает цену первой силы, а заряда хватает на уверенный вылет.
+## Ориентир темпа (15–30 с от первого вылета при уверенном управлении,
+## решение Эльдара 2026-10-09) проверяется benchmark-сценарием ниже и живой
+## пробой на CM-004 — не этой проверкой.
+func _test_first_purchase_affordable() -> void:
 	var econ := Economy.new()
+	var cap: int = CMConfig.i("flight.cargo_capacity")
+	var nut: Dictionary = CMConfig.items()[0]
+	var full_nut_value: int = int(nut["price"]) * int(floor(cap / float(nut["mass"])))
 	_check(full_nut_value >= econ.upgrade_cost(&"strength"),
-		"first purchase: full nut cargo covers first strength cost",
+		"affordability: full nut cargo covers first strength cost",
 		"value=%d cost=%d" % [full_nut_value, econ.upgrade_cost(&"strength")])
-	_check(2.0 * CMConfig.f("flight.charge_seconds") <= 120.0,
-		"first purchase: two sorties fit into 120s",
-		"2×charge=%f" % (2.0 * CMConfig.f("flight.charge_seconds")))
+	_check(CMConfig.f("flight.charge_seconds") >= 15.0,
+		"affordability: charge fits a confident 15s+ sortie",
+		"charge=%f" % CMConfig.f("flight.charge_seconds"))
+
+
+## Автоматический benchmark темпа первой покупки: отдельный экземпляр игры,
+## скриптованное «уверенное» управление (скан поля синусоидой), предметы
+## притягиваются и собираются только реальными обработчиками, лом начисляется
+## только реальной разгрузкой. Прямого заполнения трюма/денег нет.
+## Печатает фактические отметки времени (точка отсчёта — первый вылет);
+## результат — benchmark управляемого маршрута, не оценка типичного новичка.
+func _test_first_purchase_benchmark() -> void:
+	var bench: MainGame = preload("res://scenes/main.tscn").instantiate()
+	root.add_child(bench)
+	await process_frame
+	bench.launch()
+	var t_launch := 0.0
+	var sim_t := 0.0
+	var dt := 1.0 / 30.0
+	var frame := 0
+	var unload_times: Array[float] = []
+	var purchase_time := -1.0
+	var launch_count := 1
+	while sim_t < 120.0 and purchase_time < 0.0:
+		# Скан поля «уверенного игрока» — тот же паттерн, что водит мышью
+		# tools/mouse_timeline.py в CI-видео (период 11с/5.5с, полное поле
+		# не накрывается за один проход).
+		var target := Vector2(
+			460.0 + 430.0 * sin(TAU * sim_t / 11.0),
+			380.0 + 220.0 * sin(TAU * sim_t / 5.5 + PI / 3.0)
+		)
+		if bench.state == MainGame.GameState.SALVAGE:
+			bench.magnet.set_target(target)
+		bench.magnet.step(dt)
+		for c in bench.spawner.get_children():
+			if c is SalvageItem:
+				c.step(dt)
+		bench.advance_flight(dt)
+		bench.spawner.step(dt)
+		sim_t += dt
+		frame += 1
+		if frame % 30 == 0:
+			await process_frame  # флеш удалений между секундами
+		if bench.state == MainGame.GameState.DOCK:
+			unload_times.append(sim_t - t_launch)
+			if bench.economy.can_buy(&"strength"):
+				bench._on_buy(&"strength")
+				purchase_time = sim_t - t_launch
+			else:
+				bench.launch()
+				launch_count += 1
+	print(
+		"BENCHMARK first_purchase after first launch: %.2fs | unloads at: %s | sorties: %d | scrap after purchase: %d" % [
+			purchase_time, ", ".join(unload_times.map(func(v: float) -> String: return "%.1fs" % v)), launch_count, bench.economy.scrap]
+	)
+	_check(purchase_time > 0.0, "benchmark: scripted confident collection buys first strength",
+		"no purchase within 120s of simulation")
+	_check(purchase_time <= 60.0, "benchmark: purchase within generous 60s sanity bound",
+		"t=%.2fs (agreed target 15-30s)" % purchase_time)
+	bench.free()

@@ -42,7 +42,7 @@ godot --headless --path games/cosmic-magnet --editor --import
 godot --headless --path games/cosmic-magnet --quit-after 120
 # тесты правил сбора (37 проверок)
 godot --headless --path games/cosmic-magnet --script tests/test_core.gd
-# тесты экономики CM-002 (52 проверки)
+# тесты экономики CM-002 (61 проверка, включая benchmark темпа первой покупки)
 godot --headless --path games/cosmic-magnet --script tests/test_economy.gd
 # играть: LAUNCH в доке, магнит за мышью в вылете, Esc — пауза
 godot --path games/cosmic-magnet
