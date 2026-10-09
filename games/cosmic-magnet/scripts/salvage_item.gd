@@ -35,15 +35,19 @@ func step(delta: float) -> void:
 	var to_magnet := magnet_pos - position
 	var dist := to_magnet.length()
 
+	# Недоступный по силе предмет не собирается даже вплотную к магниту (CM-R02)
+	# и показывает требуемую силу, пока магнит в радиусе притяжения.
+	var can_lift := required_strength <= game.magnet.strength
+	_hint_visible = (not can_lift) and dist <= CMConfig.ATTRACTION_RADIUS
+	if not can_lift:
+		queue_redraw()
+		return
+
 	if dist <= CMConfig.CAPTURE_RADIUS:
 		_collect()
 		return
 
-	var can_lift := required_strength <= game.magnet.strength
-	# Тяжёлый предмет остаётся на месте и показывает требуемую силу (CM-R02).
-	_hint_visible = (not can_lift) and dist <= CMConfig.ATTRACTION_RADIUS
-
-	if not can_lift or dist > CMConfig.ATTRACTION_RADIUS:
+	if dist > CMConfig.ATTRACTION_RADIUS:
 		queue_redraw()
 		return
 
@@ -71,9 +75,7 @@ func is_hint_visible() -> bool:
 
 
 func _collect() -> void:
-	if collected:
-		return
-	collected = true
+	# Единственный владелец однократности — MainGame.register_collection.
 	game.register_collection(self)
 
 

@@ -21,10 +21,12 @@ func _run_all() -> void:
 	_test_capture_collects_exactly_once(main)
 	_test_large_delta_does_not_lose_capture(main)
 	_test_heavy_item_stays_and_hints(main)
+	_test_heavy_item_not_captured_in_capture_radius(main)
 	_test_respawn_bounded(main)
 	_test_field_clamp()
 	_test_pause_stops_simulation(main)
 	_test_focus_loss_autopause(main)
+	await _test_soak_collect_respawn_600s(main)
 
 	print("SUMMARY passed=%d failed=%d" % [passed, failed])
 	quit(1 if failed > 0 else 0)
@@ -89,6 +91,18 @@ func _test_inside_radius_attracts(main: MainGame) -> void:
 
 func _test_capture_collects_exactly_once(main: MainGame) -> void:
 	_center_magnet(main)
+	# F2 из ревью: прямые повторные вызовы обработчика до удаления узла.
+	var direct := _pick_free_item(main)
+	direct.position = main.magnet.position + Vector2(7, 0)
+	var before_direct := main.collected_count
+	main.register_collection(direct)
+	main.register_collection(direct)
+	_check(main.collected_count == before_direct + 1,
+		"capture: direct double register_collection adds exactly once",
+		"delta=%d" % (main.collected_count - before_direct))
+	_check(direct.collected and direct.is_queued_for_deletion(),
+		"capture: direct item marked collected and freed")
+
 	var item := _pick_free_item(main)
 	item.position = main.magnet.position + Vector2(5, 0)
 	var before := main.collected_count
@@ -96,7 +110,7 @@ func _test_capture_collects_exactly_once(main: MainGame) -> void:
 	var after_first := main.collected_count
 	item.step(0.016)
 	item.step(0.016)
-	main.register_collection(item)  # повторный вызов обработчика не должен начислять
+	main.register_collection(item)  # повтор после обычного захвата
 	_check(after_first == before + 1, "capture: collected exactly once", "delta=%d" % (after_first - before))
 	_check(main.collected_count == before + 1, "capture: repeated calls do not add",
 		"delta=%d" % (main.collected_count - before))
@@ -116,13 +130,18 @@ func _test_large_delta_does_not_lose_capture(main: MainGame) -> void:
 		"delta=%d" % (main.collected_count - before))
 
 
-func _test_heavy_item_stays_and_hints(main: MainGame) -> void:
-	_center_magnet(main)
+func _make_heavy_item(main: MainGame) -> SalvageItem:
 	var item := SalvageItem.new()
 	item.game = main
 	item.setup({"id": &"battery", "required_strength": 2, "radius": 8.0, "color": Color("7fd0e8")})
-	item.position = main.magnet.position + Vector2(60, 0)
 	main.spawner.add_child(item)
+	return item
+
+
+func _test_heavy_item_stays_and_hints(main: MainGame) -> void:
+	_center_magnet(main)
+	var item := _make_heavy_item(main)
+	item.position = main.magnet.position + Vector2(60, 0)
 	var pos_before := item.position
 	var before := main.collected_count
 	for i in 10:
@@ -131,6 +150,33 @@ func _test_heavy_item_stays_and_hints(main: MainGame) -> void:
 	_check(main.collected_count == before, "heavy item: not collected")
 	_check(item.is_hint_visible(), "heavy item: shows required strength near magnet")
 	item.free()  # синтетический предмет не влияет на счётчики поля
+
+
+## F1 из ревью: захват не должен обходить требование силы (CM-R02).
+func _test_heavy_item_not_captured_in_capture_radius(main: MainGame) -> void:
+	_center_magnet(main)
+	for d in [0.0, 5.0, 12.0, 13.0, 100.0]:
+		var item := _make_heavy_item(main)
+		item.position = main.magnet.position + Vector2(d, 0)
+		var before := main.collected_count
+		item.step(0.016)
+		_check(
+			main.collected_count == before and not item.collected,
+			"heavy capture: not collected at distance %s" % d,
+			"delta=%d" % (main.collected_count - before)
+		)
+		item.free()
+	# Повышение силы до 2 открывает тяжёлый предмет — сбор однократный.
+	var item := _make_heavy_item(main)
+	item.position = main.magnet.position + Vector2(60, 0)
+	main.magnet.strength = 2
+	var before := main.collected_count
+	for i in 30:
+		item.step(1.0 / 60.0)
+	main.magnet.strength = CMConfig.MAGNET_STRENGTH
+	_check(main.collected_count == before + 1, "heavy capture: strength 2 allows single collection",
+		"delta=%d" % (main.collected_count - before))
+	item.free()
 
 
 func _test_respawn_bounded(main: MainGame) -> void:
@@ -151,10 +197,40 @@ func _test_respawn_bounded(main: MainGame) -> void:
 		"count=%d" % main.spawner.field_count())
 	_check(max_seen <= CMConfig.MAX_ITEMS, "respawn: field count never exceeds cap",
 		"max=%d" % max_seen)
-	for i in 6000:  # ещё 10 минут симулированного времени — потолок держится
+
+
+## Активный 600-секундный цикл сбора/возрождения: каждую секунду собираем
+## 5 предметов, удаления проходят между кадрами, потолок проверяется на
+## каждом шаге — и по полю, и по реальному числу дочерних узлов.
+func _test_soak_collect_respawn_600s(main: MainGame) -> void:
+	_center_magnet(main)
+	var max_children := 0
+	var max_field := 0
+	for sec in 600:
+		for i in 5:
+			var item := _pick_free_item(main)
+			if item == null:
+				break
+			item.position = main.magnet.position + Vector2(3, 0)
+			item.step(0.016)
+		await process_frame  # queue_free доводит удаления до конца между секундами
+		max_children = maxi(max_children, main.spawner.get_child_count())
+		max_field = maxi(max_field, main.spawner.field_count())
+		for t in 10:
+			main.spawner.step(0.1)
+		max_children = maxi(max_children, main.spawner.get_child_count())
+		max_field = maxi(max_field, main.spawner.field_count())
+	for t in 120:  # хвост очереди возрождения после последнего сбора
+		await process_frame
 		main.spawner.step(0.1)
-	_check(main.spawner.field_count() <= CMConfig.MAX_ITEMS, "respawn: cap holds over 10 simulated minutes",
+	_check(max_field <= CMConfig.MAX_ITEMS, "soak 600s: field count capped at every step",
+		"max=%d" % max_field)
+	_check(max_children <= CMConfig.MAX_ITEMS, "soak 600s: real node count capped at every step",
+		"max=%d" % max_children)
+	_check(main.spawner.field_count() == CMConfig.MAX_ITEMS, "soak 600s: field restored to cap",
 		"count=%d" % main.spawner.field_count())
+	_check(main.collected_count >= 3000, "soak 600s: at least 3000 collections happened",
+		"collected=%d" % main.collected_count)
 
 
 func _test_field_clamp() -> void:

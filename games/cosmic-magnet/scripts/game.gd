@@ -40,9 +40,12 @@ func _draw() -> void:
 
 
 ## Единственная точка начисления сбора (CM-R03: ровно один раз).
+## Флаг collected ставится здесь синхронно: и прямой повторный вызов,
+## и повторный сигнал предмета дают одно начисление и одну запись очереди.
 func register_collection(item: SalvageItem) -> void:
-	if item.collected and item.is_queued_for_deletion():
+	if item.collected or item.is_queued_for_deletion():
 		return
+	item.collected = true
 	collected_count += 1
 	spawner.notify_collected()
 	item.queue_free()
