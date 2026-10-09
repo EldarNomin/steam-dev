@@ -77,6 +77,20 @@ jobs:
             exit 1
           fi
 
+      - name: Tests (economy)
+        working-directory: games/cosmic-magnet
+        run: |
+          set -o pipefail
+          "$HOME/godot/godot" --headless --path . --script tests/test_economy.gd 2>&1 | tee test-economy.log
+          if grep -E "SCRIPT ERROR|ERROR:" test-economy.log; then
+            echo "::error::errors found in economy test log"
+            exit 1
+          fi
+          if ! grep -q "SUMMARY passed=.* failed=0" test-economy.log; then
+            echo "::error::economy test summary missing or has failures"
+            exit 1
+          fi
+
       - name: Upload logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
@@ -86,14 +100,15 @@ jobs:
             games/cosmic-magnet/import.log
             games/cosmic-magnet/smoke.log
             games/cosmic-magnet/test.log
+            games/cosmic-magnet/test-economy.log
           if-no-files-found: ignore
 
   gameplay-video:
-    name: gameplay video (xvfb + real mouse input)
+    name: gameplay video 3.5min (xvfb + real mouse input)
     needs: godot
     if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     env:
       GODOT_VERSION: "4.5.1"
       GODOT_SHA512: 5bccbed65a94b82c7c319fdb15719ee8113a6e503976cc54e16f1c61fe95f3d74e5e40b8449b5bb89ff7f424574c20af01a4f5ef08b389e4dc338b245185b0b9
@@ -123,7 +138,7 @@ jobs:
           fi
           "$HOME/godot/godot" --version
 
-      - name: Record 28s of gameplay (write-movie + mouse)
+      - name: Record 210s of gameplay (write-movie + mouse)
         working-directory: games/cosmic-magnet
         run: |
           Xvfb :99 -screen 0 1400x800x24 &
@@ -132,10 +147,10 @@ jobs:
           sleep 1
           "$HOME/godot/godot" --headless --path . --editor --import
           "$HOME/godot/godot" --path . --resolution 1280x720 --position 0,0 \
-            --write-movie demo.avi --fixed-fps 30 --quit-after 840 &
+            --write-movie demo.avi --fixed-fps 30 --quit-after 6300 &
           GODOT_PID=$!
           sleep 4
-          python3 tools/mouse_timeline.py 26
+          python3 tools/mouse_timeline.py 200
           wait $GODOT_PID
           ffmpeg -y -loglevel error -i demo.avi -c:v libx264 -pix_fmt yuv420p -crf 23 \
             cosmic-magnet-gameplay.mp4

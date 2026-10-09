@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
 [ext_resource type="Script" path="res://scripts/magnet.gd" id="2_magnet"]
@@ -12,6 +12,30 @@ border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0.22, 0.78, 0.76, 0.35)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
+bg_color = Color(0.09, 0.16, 0.32, 0.95)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.43, 0.95, 0.93, 0.5)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_launch"]
+bg_color = Color(0.72, 0.46, 0.12, 0.95)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.8, 0.4, 0.8)
 corner_radius_top_left = 4
 corner_radius_top_right = 4
 corner_radius_bottom_right = 4
@@ -48,25 +72,31 @@ theme_override_constants/margin_bottom = 8
 offset_right = 1248.0
 offset_bottom = 40.0
 alignment = 1
-theme_override_constants/separation = 48
+theme_override_constants/separation = 36
 
-[node name="CollectedLabel" type="Label" parent="UI/HUD/MarginContainer/HBoxContainer"]
+[node name="ScrapLabel" type="Label" parent="UI/HUD/MarginContainer/HBoxContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.83, 0.5, 1)
-theme_override_font_sizes/font_size = 20
-text = "Collected: 0"
+theme_override_font_sizes/font_size = 19
+text = "Scrap: 0"
 
-[node name="FieldLabel" type="Label" parent="UI/HUD/MarginContainer/HBoxContainer"]
+[node name="ChargeLabel" type="Label" parent="UI/HUD/MarginContainer/HBoxContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.68, 0.78, 0.9, 1)
-theme_override_font_sizes/font_size = 20
-text = "On field: 0 / 40"
+theme_override_font_sizes/font_size = 19
+text = "Charge: 45s"
 
-[node name="StrengthLabel" type="Label" parent="UI/HUD/MarginContainer/HBoxContainer"]
+[node name="CargoLabel" type="Label" parent="UI/HUD/MarginContainer/HBoxContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.43, 0.95, 0.93, 1)
-theme_override_font_sizes/font_size = 20
-text = "Strength: 1"
+theme_override_font_sizes/font_size = 19
+text = "Cargo: 0/30"
+
+[node name="StatsLabel" type="Label" parent="UI/HUD/MarginContainer/HBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.72, 0.86, 1)
+theme_override_font_sizes/font_size = 19
+text = "Str: 1  Rad: 100  Cap: 30"
 
 [node name="SidePanel" type="Panel" parent="UI"]
 offset_left = 980.0
@@ -75,45 +105,92 @@ offset_right = 1280.0
 offset_bottom = 720.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
-[node name="MarginContainer" type="MarginContainer" parent="UI/SidePanel"]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
+[node name="TitleLabel" type="Label" parent="UI/SidePanel"]
 offset_left = 16.0
 offset_top = 16.0
-offset_right = -16.0
-offset_bottom = -16.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="VBoxContainer" type="VBoxContainer" parent="UI/SidePanel/MarginContainer"]
-offset_right = 268.0
-offset_bottom = 628.0
-theme_override_constants/separation = 12
-
-[node name="TitleLabel" type="Label" parent="UI/SidePanel/MarginContainer/VBoxContainer"]
-layout_mode = 2
+offset_right = 284.0
+offset_bottom = 42.0
 theme_override_colors/font_color = Color(0.43, 0.95, 0.93, 1)
 theme_override_font_sizes/font_size = 22
 text = "UPGRADES"
 
-[node name="NoteLabel" type="Label" parent="UI/SidePanel/MarginContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.68, 0.78, 0.9, 1)
+[node name="StrengthButton" type="Button" parent="UI/SidePanel"]
+offset_left = 16.0
+offset_top = 56.0
+offset_right = 284.0
+offset_bottom = 100.0
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_button")
 theme_override_font_sizes/font_size = 16
-text = "Shop, charge and cargo
-arrive in CM-002.
+text = "Magnet strength L0 — 20 scrap"
 
-CM-001 prototype:
-drag the magnet with the
-mouse and collect scrap."
+[node name="RadiusButton" type="Button" parent="UI/SidePanel"]
+offset_left = 16.0
+offset_top = 108.0
+offset_right = 284.0
+offset_bottom = 152.0
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_button")
+theme_override_font_sizes/font_size = 16
+text = "Attraction radius L0 — 15 scrap"
+
+[node name="CapacityButton" type="Button" parent="UI/SidePanel"]
+offset_left = 16.0
+offset_top = 160.0
+offset_right = 284.0
+offset_bottom = 204.0
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_button")
+theme_override_font_sizes/font_size = 16
+text = "Cargo capacity L0 — 15 scrap"
+
+[node name="NoteLabel" type="Label" parent="UI/SidePanel"]
+offset_left = 16.0
+offset_top = 220.0
+offset_right = 284.0
+offset_bottom = 288.0
+theme_override_colors/font_color = Color(0.68, 0.78, 0.9, 1)
+theme_override_font_sizes/font_size = 14
+text = "Saves, unique finds and the
+final ship arrive in CM-003+."
 autowrap_mode = 3
+
+[node name="StatusLabel" type="Label" parent="UI/SidePanel"]
+offset_left = 16.0
+offset_top = 296.0
+offset_right = 284.0
+offset_bottom = 360.0
+theme_override_colors/font_color = Color(0.43, 0.95, 0.93, 1)
+theme_override_font_sizes/font_size = 15
+text = "In dock: buy upgrades, then launch."
+autowrap_mode = 3
+
+[node name="ReturnButton" type="Button" parent="UI/SidePanel"]
+offset_left = 16.0
+offset_top = 540.0
+offset_right = 284.0
+offset_bottom = 588.0
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_button")
+theme_override_font_sizes/font_size = 17
+text = "RETURN & UNLOAD"
+
+[node name="LaunchButton" type="Button" parent="UI/SidePanel"]
+offset_left = 16.0
+offset_top = 596.0
+offset_right = 284.0
+offset_bottom = 644.0
+theme_override_styles/normal = SubResource("StyleBoxFlat_launch")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_launch")
+theme_override_font_sizes/font_size = 20
+text = "LAUNCH"
 
 [node name="PauseOverlay" type="ColorRect" parent="UI"]
 visible = false
 offset_right = 1280.0
 offset_bottom = 720.0
 color = Color(0.03, 0.05, 0.1, 0.78)
+mouse_filter = 0
 
 [node name="CenterContainer" type="CenterContainer" parent="UI/PauseOverlay"]
 anchors_preset = 15

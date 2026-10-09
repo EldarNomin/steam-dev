@@ -1,22 +1,40 @@
 class_name Spawner
 extends Node2D
-## Пополняет поле обычными предметами (CM-R08, часть для CM-001).
-## На поле не больше MAX_ITEMS; собранный предмет ставится в очередь
-## возрождения и обязательно возвращается, когда освобождается место.
+## Пополняет поле обычными предметами (CM-R08). На поле не больше max_items;
+## собранный предмет ставится в очередь возрождения и обязательно
+## возвращается, когда освобождается место. Доступные гайки спавнятся всегда:
+## если на поле не осталось предметов, которые магнит может поднять, спавнится
+## гайка — прогресс нельзя заблокировать покупкой одного направления.
 
 var game: MainGame
 # Соседний узел: @onready у MainGame ещё не разрешён во время нашего _ready.
 @onready var magnet: Magnet = get_parent().get_node("Magnet")
 
 var _respawn_queue: Array[float] = []
+var _defs_cache: Array = []
 
 
 func _ready() -> void:
 	game = get_parent() as MainGame
-	# Начальное заполнение — детерминированный микс двух типов.
-	for i in CMConfig.MAX_ITEMS:
-		_spawn_item(CMConfig.ITEM_TYPES[i % CMConfig.ITEM_TYPES.size()])
+	_defs_cache = CMConfig.items()
+	# Начальное заполнение — детерминированный микс по весам (50/30/20).
+	var schedule := _initial_schedule()
+	for i in mini(CMConfig.i("field.max_items"), schedule.size()):
+		_spawn_item(schedule[i])
 	game.notify_field_changed()
+
+
+## Начальный микс по весам: 50% гаек / 30% пластин / 20% аккумуляторов.
+func _initial_schedule() -> Array:
+	var schedule: Array = []
+	var total := 0.0
+	for def in _defs_cache:
+		total += float(def.get("weight", 1))
+	for def in _defs_cache:
+		var cnt := int(round(float(def.get("weight", 1)) / total * CMConfig.i("field.max_items")))
+		for i in cnt:
+			schedule.append(def)
+	return schedule
 
 
 func _physics_process(delta: float) -> void:
@@ -31,19 +49,45 @@ func step(delta: float) -> void:
 	while (
 		not _respawn_queue.is_empty()
 		and _respawn_queue[0] <= 0.0
-		and _field_count() < CMConfig.MAX_ITEMS
+		and _field_count() < CMConfig.i("field.max_items")
 	):
 		_respawn_queue.remove_at(0)
-		_spawn_item(CMConfig.ITEM_TYPES.pick_random())
+		_spawn_item(_pick_type())
 	game.notify_field_changed()
 
 
 func notify_collected() -> void:
-	_respawn_queue.append(CMConfig.RESPAWN_DELAY)
+	_respawn_queue.append(CMConfig.f("field.respawn_delay"))
+
+
+## Для тестов: сбросить отложенные возрождения.
+func clear_pending_respawns() -> void:
+	_respawn_queue.clear()
+
+
+## Возрождение даёт только типы, которые магнит уже может поднять (SPEC:
+## «всегда спавнятся доступные гайки»; батареи из начального микса остаются
+## на поле как видимый стимул прокачки и пополняются после покупки силы).
+func _pick_type() -> Dictionary:
+	var pool: Array = []
+	for def in _defs_cache:
+		if int(def["required_strength"]) <= magnet.strength:
+			pool.append(def)
+	if pool.is_empty():
+		pool = _defs_cache
+	var total := 0.0
+	for def in pool:
+		total += float(def.get("weight", 1))
+	var roll := randf() * total
+	for def in pool:
+		roll -= float(def.get("weight", 1))
+		if roll <= 0.0:
+			return def
+	return pool[0]
 
 
 func _spawn_item(type_def: Dictionary) -> void:
-	if _field_count() >= CMConfig.MAX_ITEMS:
+	if _field_count() >= CMConfig.i("field.max_items"):
 		return
 	var item := SalvageItem.new()
 	item.game = game
@@ -54,13 +98,13 @@ func _spawn_item(type_def: Dictionary) -> void:
 
 ## Поле минус поля UI и минус область притяжения магнита (GAME-SPEC, «Спавн»).
 func _random_spawn_position() -> Vector2:
-	var r := CMConfig.FIELD_RECT.grow(-CMConfig.SPAWN_INSET)
+	var r := CMConfig.FIELD_RECT.grow(-CMConfig.f("field.spawn_inset"))
 	var pos := Vector2.ZERO
 	for i in 64:
 		pos = Vector2(
 			randf_range(r.position.x, r.end.x), randf_range(r.position.y, r.end.y)
 		)
-		if pos.distance_to(magnet.position) > CMConfig.ATTRACTION_RADIUS:
+		if pos.distance_to(magnet.position) > magnet.attraction_radius:
 			return pos
 	return pos
 

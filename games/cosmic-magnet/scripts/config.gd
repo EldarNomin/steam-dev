@@ -1,26 +1,55 @@
 class_name CMConfig
 extends RefCounted
-## Числа CM-001. Стартовые значения из GAME-SPEC (раздел «Исходные числа»).
-## В CM-002 переезжают в единый машиночитаемый конфиг экономики.
+## Единственный машиночитаемый источник баланса (с CM-002) — data/balance.json.
+## Здесь только типизированный доступ к данным; правила расчёта (цены, уровни)
+## живут в Economy и не дублируются.
 
-# Поле: окно 1280x720, сверху HUD высотой 60, справа панель шириной 300.
+# Раскладка окна (не экономика): поле слева от панели улучшений.
 const FIELD_RECT := Rect2(0.0, 60.0, 980.0, 660.0)
 const FIELD_MARGIN := 24.0
 
-const ATTRACTION_RADIUS := 100.0
-const CAPTURE_RADIUS := 12.0
-const MAGNET_STRENGTH := 1
+static var _balance: Dictionary = {}
+static var _loaded := false
 
-const MAGNET_SPEED := 900.0
-const ITEM_SPEED_MIN := 80.0
-const ITEM_SPEED_MAX := 280.0
 
-const MAX_ITEMS := 40
-const RESPAWN_DELAY := 2.0
-const SPAWN_INSET := 30.0
+static func ensure_loaded() -> void:
+	if _loaded:
+		return
+	var f := FileAccess.open("res://data/balance.json", FileAccess.READ)
+	if f == null:
+		push_error("CMConfig: data/balance.json not found")
+		return
+	var parsed: Variant = JSON.parse_string(f.get_as_text())
+	if parsed is Dictionary:
+		_balance = parsed
+		_loaded = true
+	else:
+		push_error("CMConfig: data/balance.json is not a JSON object")
 
-## Два типа обычных предметов CM-001. required_strength по CM-R02.
-const ITEM_TYPES: Array[Dictionary] = [
-	{"id": &"nut", "required_strength": 1, "radius": 7.0, "color": Color("a7b4c4")},
-	{"id": &"plate", "required_strength": 1, "radius": 9.0, "color": Color("d99a2b")},
-]
+
+static func node(path: String) -> Variant:
+	ensure_loaded()
+	var cur: Variant = _balance
+	for part in path.split("."):
+		if cur is Dictionary and cur.has(part):
+			cur = cur[part]
+		else:
+			push_error("CMConfig: missing key '%s' in balance.json" % path)
+			return null
+	return cur
+
+
+static func f(path: String) -> float:
+	return float(node(path))
+
+
+static func i(path: String) -> int:
+	return int(node(path))
+
+
+static func items() -> Array:
+	return node("items")
+
+
+static func upgrades() -> Array:
+	return node("upgrades")
