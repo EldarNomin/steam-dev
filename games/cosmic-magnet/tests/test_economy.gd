@@ -14,6 +14,12 @@ func _initialize() -> void:
 
 
 func _run_all() -> void:
+	# Отдельный временный профиль (требование приёмки): экономика пишет сейвы
+	# при покупках/разгрузках — сохранение игрока не трогаем.
+	SaveService.save_dir = "user://cm3_tests/econ_%d" % (Time.get_ticks_msec() + randi() % 100000)
+	DirAccess.make_dir_recursive_absolute(SaveService.save_dir)
+	SaveService.wipe_files()
+
 	_test_cost_curve_and_caps()
 	_test_unavailable_buy_changes_nothing()
 
@@ -33,6 +39,10 @@ func _run_all() -> void:
 	_test_first_purchase_affordable()
 	_test_ui_inside_screen(main)
 	await _test_first_purchase_benchmark()
+
+	SaveService.wipe_files()
+	DirAccess.remove_absolute(SaveService.save_dir)
+	SaveService.save_dir = "user://cosmic_magnet"
 
 	print("SUMMARY passed=%d failed=%d" % [passed, failed])
 	quit(1 if failed > 0 else 0)

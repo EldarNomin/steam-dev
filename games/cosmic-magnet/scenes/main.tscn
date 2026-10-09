@@ -1,9 +1,10 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
 [ext_resource type="Script" path="res://scripts/magnet.gd" id="2_magnet"]
-[ext_resource type="Script" path="res://scripts/spawner.gd" id="3_spawner"]
-[ext_resource type="Script" path="res://scripts/ui.gd" id="4_ui"]
+[ext_resource type="Script" path="res://scripts/ship_wreck.gd" id="3_ship"]
+[ext_resource type="Script" path="res://scripts/spawner.gd" id="4_spawner"]
+[ext_resource type="Script" path="res://scripts/ui.gd" id="5_ui"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
 bg_color = Color(0.055, 0.09, 0.19, 0.94)
@@ -44,16 +45,20 @@ corner_radius_bottom_left = 4
 [node name="Main" type="Node2D"]
 script = ExtResource("1_game")
 
+[node name="ShipWreck" type="Node2D" parent="."]
+position = Vector2(790, 190)
+script = ExtResource("3_ship")
+
 [node name="Magnet" type="Node2D" parent="."]
 position = Vector2(490, 390)
 script = ExtResource("2_magnet")
 
 [node name="ItemField" type="Node2D" parent="."]
-script = ExtResource("3_spawner")
+script = ExtResource("4_spawner")
 
 [node name="UI" type="CanvasLayer" parent="."]
 process_mode = 3
-script = ExtResource("4_ui")
+script = ExtResource("5_ui")
 
 [node name="HUD" type="Panel" parent="UI"]
 offset_right = 1280.0
@@ -144,17 +149,6 @@ theme_override_styles/disabled = SubResource("StyleBoxFlat_button")
 theme_override_font_sizes/font_size = 16
 text = "Cargo capacity L0 — 15 scrap"
 
-[node name="NoteLabel" type="Label" parent="UI/SidePanel"]
-offset_left = 16.0
-offset_top = 220.0
-offset_right = 284.0
-offset_bottom = 288.0
-theme_override_colors/font_color = Color(0.68, 0.78, 0.9, 1)
-theme_override_font_sizes/font_size = 14
-text = "Saves, unique finds and the
-final ship arrive in CM-003+."
-autowrap_mode = 3
-
 [node name="StatusLabel" type="Label" parent="UI/SidePanel"]
 offset_left = 16.0
 offset_top = 296.0
@@ -185,6 +179,17 @@ theme_override_styles/disabled = SubResource("StyleBoxFlat_launch")
 theme_override_font_sizes/font_size = 20
 text = "LAUNCH"
 
+[node name="TutorialLabel" type="Label" parent="UI"]
+offset_left = 20.0
+offset_top = 660.0
+offset_right = 800.0
+offset_bottom = 706.0
+theme_override_colors/font_color = Color(1, 0.83, 0.5, 1)
+theme_override_colors/font_outline_color = Color(0.05, 0.08, 0.16, 0.9)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 17
+text = "Press LAUNCH to start a salvage run."
+
 [node name="PauseOverlay" type="ColorRect" parent="UI"]
 visible = false
 offset_right = 1280.0
@@ -199,7 +204,147 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="PauseLabel" type="Label" parent="UI/PauseOverlay/CenterContainer"]
+[node name="PauseBox" type="VBoxContainer" parent="UI/PauseOverlay/CenterContainer"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="PauseLabel" type="Label" parent="UI/PauseOverlay/CenterContainer/PauseBox"]
+layout_mode = 2
 theme_override_colors/font_color = Color(0.43, 0.95, 0.93, 1)
 theme_override_font_sizes/font_size = 30
-text = "PAUSED — press Esc to resume"
+text = "PAUSED"
+horizontal_alignment = 1
+
+[node name="ResumeButton" type="Button" parent="UI/PauseOverlay/CenterContainer/PauseBox"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_font_sizes/font_size = 18
+text = "RESUME"
+
+[node name="MenuButton" type="Button" parent="UI/PauseOverlay/CenterContainer/PauseBox"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_font_sizes/font_size = 18
+text = "SAVE & MAIN MENU"
+
+[node name="MainMenu" type="ColorRect" parent="UI"]
+offset_right = 1280.0
+offset_bottom = 720.0
+color = Color(0.02, 0.04, 0.09, 0.96)
+mouse_filter = 0
+
+[node name="MenuPanel" type="Panel" parent="UI/MainMenu"]
+offset_left = 470.0
+offset_top = 110.0
+offset_right = 810.0
+offset_bottom = 650.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="TitleLabel" type="Label" parent="UI/MainMenu/MenuPanel"]
+offset_left = 20.0
+offset_top = 24.0
+offset_right = 320.0
+offset_bottom = 70.0
+theme_override_colors/font_color = Color(0.43, 0.95, 0.93, 1)
+theme_override_font_sizes/font_size = 34
+text = "COSMIC MAGNET"
+horizontal_alignment = 1
+
+[node name="SubtitleLabel" type="Label" parent="UI/MainMenu/MenuPanel"]
+offset_left = 20.0
+offset_top = 78.0
+offset_right = 320.0
+offset_bottom = 130.0
+theme_override_colors/font_color = Color(0.62, 0.7, 0.82, 1)
+theme_override_font_sizes/font_size = 14
+text = "Prototype fragment CM-003: salvage, upgrade, find the relic.
+The final ship needs strength 12 — later."
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="ContinueButton" type="Button" parent="UI/MainMenu/MenuPanel"]
+offset_left = 30.0
+offset_top = 156.0
+offset_right = 310.0
+offset_bottom = 202.0
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_font_sizes/font_size = 19
+text = "CONTINUE"
+
+[node name="NewGameButton" type="Button" parent="UI/MainMenu/MenuPanel"]
+offset_left = 30.0
+offset_top = 214.0
+offset_right = 310.0
+offset_bottom = 260.0
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_font_sizes/font_size = 19
+text = "NEW GAME"
+
+[node name="QuitButton" type="Button" parent="UI/MainMenu/MenuPanel"]
+offset_left = 30.0
+offset_top = 272.0
+offset_right = 310.0
+offset_bottom = 318.0
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_font_sizes/font_size = 19
+text = "QUIT"
+
+[node name="VolumeLabel" type="Label" parent="UI/MainMenu/MenuPanel"]
+offset_left = 30.0
+offset_top = 356.0
+offset_right = 310.0
+offset_bottom = 378.0
+theme_override_colors/font_color = Color(0.68, 0.78, 0.9, 1)
+theme_override_font_sizes/font_size = 15
+text = "Master volume"
+
+[node name="VolumeSlider" type="HSlider" parent="UI/MainMenu/MenuPanel"]
+offset_left = 30.0
+offset_top = 386.0
+offset_right = 310.0
+offset_bottom = 410.0
+max_value = 100.0
+value = 80.0
+
+[node name="NewGameConfirm" type="ColorRect" parent="UI"]
+visible = false
+offset_right = 1280.0
+offset_bottom = 720.0
+color = Color(0.02, 0.04, 0.09, 0.85)
+mouse_filter = 0
+
+[node name="ConfirmPanel" type="Panel" parent="UI/NewGameConfirm"]
+offset_left = 460.0
+offset_top = 250.0
+offset_right = 820.0
+offset_bottom = 450.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="ConfirmLabel" type="Label" parent="UI/NewGameConfirm/ConfirmPanel"]
+offset_left = 32.0
+offset_top = 24.0
+offset_right = 328.0
+offset_bottom = 84.0
+theme_override_colors/font_color = Color(0.68, 0.78, 0.9, 1)
+theme_override_font_sizes/font_size = 17
+text = "Start a new run? Current run progress
+will be replaced."
+autowrap_mode = 3
+
+[node name="ConfirmYes" type="Button" parent="UI/NewGameConfirm/ConfirmPanel"]
+offset_left = 32.0
+offset_top = 100.0
+offset_right = 328.0
+offset_bottom = 146.0
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_font_sizes/font_size = 18
+text = "NEW GAME"
+
+[node name="ConfirmNo" type="Button" parent="UI/NewGameConfirm/ConfirmPanel"]
+offset_left = 32.0
+offset_top = 158.0
+offset_right = 328.0
+offset_bottom = 204.0
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_font_sizes/font_size = 18
+text = "CANCEL"
