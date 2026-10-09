@@ -1,10 +1,10 @@
 # Состояние проекта
 
-Обновлено: 2026-10-08 (сдача CM-001). Реализация и проверки CM-001 выполнены GLM; ожидается решение Codex.
+Обновлено: 2026-10-09. Codex проверил CM-001 на f5bcd8c: CHANGES_REQUESTED. Исправления выполняются в текущем PR #3; CM-002 остаётся LOCKED.
 
 | Задача | Состояние | Результат / блокер |
 |---|---|---|
-| CM-001 | READY_FOR_REVIEW | PR #3 (ветка `feat/cosmic-magnet/CM-001-baseline`), код `ea4c439` + инфраструктурные `416eb9c`/`d0bcee9`/`5971f5c`. Отчёт: `docs/reports/CM-001-implementation.md`. Import/smoke/тесты PASS (26/26, локально Windows и в CI ubuntu); видео 28 с — CI-артефакт `cosmic-magnet-gameplay-mp4` |
+| CM-001 | CHANGES_REQUESTED | PR #3, проверен head `f5bcd8c72989f4eb8fd43a3b02d3bc270d329f4e`. Собственные import/smoke/tests PASS (26/26), стресс 600 с/3000 сборов PASS. F1: захват обходит силу; F2: прямой повтор register_collection даёт двойное начисление. Решение и исправления: `docs/reports/CM-001-review.md`. После исправлений повторная сдача; не начинать CM-002. |
 | CM-002 | LOCKED | После приёмки CM-001 |
 | CM-003 | LOCKED | После приёмки CM-002 |
 | CM-004 | LOCKED | После приёмки CM-003; нужны игровые пробы |
