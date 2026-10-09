@@ -1,11 +1,11 @@
 # Состояние проекта
 
-Обновлено: 2026-10-09. Codex принял CM-001 на head `67e2a03`; следующий этап — CM-002. PR #3 пока не слит.
+Обновлено: 2026-10-09. CM-002 реализован и сдан (READY_FOR_REVIEW); ждём решения Codex.
 
 | Задача | Состояние | Результат / блокер |
 |---|---|---|
-| CM-001 | ACCEPTED | PR #3, проверен `67e2a03daadf11505fe1f57b3fafcce8149cb20c`. F1/F2 закрыты; собственные import/smoke и 37/37 PASS; активный soak 600 с PASS; CI и кадры актуального видео проверены. Решение: `docs/reports/CM-001-review.md`. |
-| CM-002 | CURRENT | Экономическая петля по DEVELOPMENT-PLAN: SALVAGE/DOCK, заряд/масса, разгрузка, три улучшения и единый конфиг. База должна включать принятый CM-001; PR #3 пока не слит. |
+| CM-001 | ACCEPTED | PR #3, проверен `67e2a03daadf11505fe1f57b3fafcce8149cb20c`. Решение: `docs/reports/CM-001-review.md`. |
+| CM-002 | READY_FOR_REVIEW | Ветка `feat/cosmic-magnet/CM-002-economy` (stacked на CM-001), код `c39c4ff340fc776f433124989c439a1b6774f4c4`. DOCK/SALVAGE, заряд, груз, идемпотентная разгрузка, три улучшения, единый `data/balance.json`. Тесты 37+52 PASS (локально Windows, CI — в PR); видео 210 с с реальными кликами. Отчёт: `docs/reports/CM-002-implementation.md`. CM-003 не начат |
 | CM-003 | LOCKED | После приёмки CM-002 |
 | CM-004 | LOCKED | После приёмки CM-003; нужны игровые пробы |
 | CM-005 | LOCKED | После решения CONTINUE по CM-004 |
