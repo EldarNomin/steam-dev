@@ -96,8 +96,11 @@ jobs:
         run: |
           set -o pipefail
           "$HOME/godot/godot" --headless --path . --script tests/test_save.gd 2>&1 | tee test-save.log
-          if grep -E "SCRIPT ERROR|ERROR:" test-save.log; then
-            echo "::error::errors found in save test log"
+          # Тест намеренно скармливает движку битый JSON (проверка восстановления
+          # из бакапа) — его ожидаемый шум 'ERROR: Parse JSON failed' не считается
+          # сбоем; любые другие SCRIPT ERROR/ERROR остаются фатальными.
+          if grep -E "SCRIPT ERROR|ERROR:" test-save.log | grep -v "Parse JSON failed"; then
+            echo "::error::unexpected errors found in save test log"
             exit 1
           fi
           if ! grep -q "SUMMARY passed=.* failed=0" test-save.log; then
