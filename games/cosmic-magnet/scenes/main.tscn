@@ -1,0 +1,128 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
+[ext_resource type="Script" path="res://scripts/magnet.gd" id="2_magnet"]
+[ext_resource type="Script" path="res://scripts/spawner.gd" id="3_spawner"]
+[ext_resource type="Script" path="res://scripts/ui.gd" id="4_ui"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.055, 0.09, 0.19, 0.94)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.22, 0.78, 0.76, 0.35)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_game")
+
+[node name="Magnet" type="Node2D" parent="."]
+position = Vector2(490, 390)
+script = ExtResource("2_magnet")
+
+[node name="ItemField" type="Node2D" parent="."]
+script = ExtResource("3_spawner")
+
+[node name="UI" type="CanvasLayer" parent="."]
+process_mode = 3
+script = ExtResource("4_ui")
+
+[node name="HUD" type="Panel" parent="UI"]
+offset_right = 1280.0
+offset_bottom = 56.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="MarginContainer" type="MarginContainer" parent="UI/HUD"]
+offset_right = 1280.0
+offset_bottom = 56.0
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 8
+
+[node name="HBoxContainer" type="HBoxContainer" parent="UI/HUD/MarginContainer"]
+offset_right = 1248.0
+offset_bottom = 40.0
+alignment = 1
+theme_override_constants/separation = 48
+
+[node name="CollectedLabel" type="Label" parent="UI/HUD/MarginContainer/HBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.83, 0.5, 1)
+theme_override_font_sizes/font_size = 20
+text = "Collected: 0"
+
+[node name="FieldLabel" type="Label" parent="UI/HUD/MarginContainer/HBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.68, 0.78, 0.9, 1)
+theme_override_font_sizes/font_size = 20
+text = "On field: 0 / 40"
+
+[node name="StrengthLabel" type="Label" parent="UI/HUD/MarginContainer/HBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.43, 0.95, 0.93, 1)
+theme_override_font_sizes/font_size = 20
+text = "Strength: 1"
+
+[node name="SidePanel" type="Panel" parent="UI"]
+offset_left = 980.0
+offset_top = 60.0
+offset_right = 1280.0
+offset_bottom = 720.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="MarginContainer" type="MarginContainer" parent="UI/SidePanel"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI/SidePanel/MarginContainer"]
+offset_right = 268.0
+offset_bottom = 628.0
+theme_override_constants/separation = 12
+
+[node name="TitleLabel" type="Label" parent="UI/SidePanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.43, 0.95, 0.93, 1)
+theme_override_font_sizes/font_size = 22
+text = "UPGRADES"
+
+[node name="NoteLabel" type="Label" parent="UI/SidePanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.68, 0.78, 0.9, 1)
+theme_override_font_sizes/font_size = 16
+text = "Shop, charge and cargo
+arrive in CM-002.
+
+CM-001 prototype:
+drag the magnet with the
+mouse and collect scrap."
+autowrap_mode = 3
+
+[node name="PauseOverlay" type="ColorRect" parent="UI"]
+visible = false
+offset_right = 1280.0
+offset_bottom = 720.0
+color = Color(0.03, 0.05, 0.1, 0.78)
+
+[node name="CenterContainer" type="CenterContainer" parent="UI/PauseOverlay"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="PauseLabel" type="Label" parent="UI/PauseOverlay/CenterContainer"]
+theme_override_colors/font_color = Color(0.43, 0.95, 0.93, 1)
+theme_override_font_sizes/font_size = 30
+text = "PAUSED — press Esc to resume"

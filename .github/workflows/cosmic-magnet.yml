@@ -1,0 +1,149 @@
+name: cosmic-magnet
+
+# Отдельный CI игры Cosmic Magnet: срабатывает только на её путях.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "games/cosmic-magnet/**"
+      - ".github/workflows/cosmic-magnet.yml"
+  pull_request:
+    paths:
+      - "games/cosmic-magnet/**"
+      - ".github/workflows/cosmic-magnet.yml"
+  workflow_dispatch:
+
+jobs:
+  godot:
+    name: import / smoke / test (Godot 4.5.1 headless)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GODOT_VERSION: "4.5.1"
+      # Официальная сумма из SHA512-SUMS.txt релиза 4.5.1-stable.
+      GODOT_SHA512: 5bccbed65a94b82c7c319fdb15719ee8113a6e503976cc54e16f1c61fe95f3d74e5e40b8449b5bb89ff7f424574c20af01a4f5ef08b389e4dc338b245185b0b9
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Godot 4.5.1 binary
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-4.5.1-linux-x86_64
+
+      - name: Download and verify Godot
+        run: |
+          if [ ! -x "$HOME/godot/godot" ]; then
+            curl -L -o /tmp/godot.zip \
+              "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+            echo "${GODOT_SHA512}  /tmp/godot.zip" | sha512sum -c -
+            mkdir -p "$HOME/godot"
+            unzip -o /tmp/godot.zip -d "$HOME/godot"
+            mv "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" "$HOME/godot/godot"
+          fi
+          "$HOME/godot/godot" --version
+
+      - name: Import (headless editor import)
+        working-directory: games/cosmic-magnet
+        run: |
+          set -o pipefail
+          "$HOME/godot/godot" --headless --path . --editor --import 2>&1 | tee import.log
+          if grep -E "SCRIPT ERROR|ERROR:" import.log; then
+            echo "::error::errors found in import log"
+            exit 1
+          fi
+
+      - name: Smoke (headless, 120 frames)
+        working-directory: games/cosmic-magnet
+        run: |
+          set -o pipefail
+          "$HOME/godot/godot" --headless --path . --quit-after 120 2>&1 | tee smoke.log
+          if grep -E "SCRIPT ERROR|ERROR:" smoke.log; then
+            echo "::error::errors found in smoke log"
+            exit 1
+          fi
+
+      - name: Tests (collection rules)
+        working-directory: games/cosmic-magnet
+        run: |
+          set -o pipefail
+          "$HOME/godot/godot" --headless --path . --script tests/test_core.gd 2>&1 | tee test.log
+          if grep -E "SCRIPT ERROR|ERROR:" test.log; then
+            echo "::error::errors found in test log"
+            exit 1
+          fi
+          if ! grep -q "SUMMARY passed=.* failed=0" test.log; then
+            echo "::error::test summary missing or has failures"
+            exit 1
+          fi
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cosmic-magnet-logs
+          path: |
+            games/cosmic-magnet/import.log
+            games/cosmic-magnet/smoke.log
+            games/cosmic-magnet/test.log
+          if-no-files-found: ignore
+
+  gameplay-video:
+    name: gameplay video (xvfb + real mouse input)
+    needs: godot
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GODOT_VERSION: "4.5.1"
+      GODOT_SHA512: 5bccbed65a94b82c7c319fdb15719ee8113a6e503976cc54e16f1c61fe95f3d74e5e40b8449b5bb89ff7f424574c20af01a4f5ef08b389e4dc338b245185b0b9
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install virtual display and input tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb xdotool ffmpeg libgl1-mesa-dri libglx-mesa0
+
+      - name: Cache Godot 4.5.1 binary
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-4.5.1-linux-x86_64
+
+      - name: Download and verify Godot
+        run: |
+          if [ ! -x "$HOME/godot/godot" ]; then
+            curl -L -o /tmp/godot.zip \
+              "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+            echo "${GODOT_SHA512}  /tmp/godot.zip" | sha512sum -c -
+            mkdir -p "$HOME/godot"
+            unzip -o /tmp/godot.zip -d "$HOME/godot"
+            mv "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" "$HOME/godot/godot"
+          fi
+          "$HOME/godot/godot" --version
+
+      - name: Record 28s of gameplay (write-movie + mouse)
+        working-directory: games/cosmic-magnet
+        run: |
+          Xvfb :99 -screen 0 1400x800x24 &
+          export DISPLAY=:99
+          export LIBGL_ALWAYS_SOFTWARE=1
+          sleep 1
+          "$HOME/godot/godot" --headless --path . --editor --import
+          "$HOME/godot/godot" --path . --resolution 1280x720 --position 0,0 \
+            --write-movie demo.avi --fixed-fps 30 --quit-after 840 &
+          GODOT_PID=$!
+          sleep 4
+          python3 tools/mouse_timeline.py 26
+          wait $GODOT_PID
+          ffmpeg -y -loglevel error -i demo.avi -c:v libx264 -pix_fmt yuv420p -crf 23 \
+            cosmic-magnet-gameplay.mp4
+          ls -la demo.avi cosmic-magnet-gameplay.mp4
+
+      - name: Upload gameplay video artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cosmic-magnet-gameplay-mp4
+          path: games/cosmic-magnet/cosmic-magnet-gameplay.mp4
+          if-no-files-found: error
