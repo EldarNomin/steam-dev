@@ -1,7 +1,9 @@
 extends SceneTree
-## Headless-тест правил сбора CM-001 (CM-R01–R03 + часть R08).
+## Headless-тест правил сбора CM-001/CM-002 (CM-R01–R03 + часть R08).
 ## Запуск: godot --headless --path games/cosmic-magnet --script tests/test_core.gd
-## Тест управляет шагами вручную (без кадров дерева), поэтому детерминирован.
+## Сборные проверки вызывают шаги вручную; soak-блок использует реальные кадры
+## дерева (await process_frame), поэтому проверяет инварианты-потолки, а не
+## конкретные траектории: во время кадров движок сам двигает магнит и предметы.
 
 var passed := 0
 var failed := 0
@@ -16,6 +18,7 @@ func _run_all() -> void:
 	root.add_child(main)
 
 	_test_initial_fill(main)
+	main.launch()  # правила сбора действуют в SALVAGE
 	_test_outside_radius_not_collected(main)
 	_test_inside_radius_attracts(main)
 	_test_capture_collects_exactly_once(main)
@@ -45,9 +48,17 @@ func _center_magnet(main: MainGame) -> void:
 	main.magnet.position = Vector2(490, 390)
 
 
+## Первый предмет, который текущий магнит может поднять и который влезает
+## в трюм (в soak поле содержит и недоступные батареи — их честно пропускаем).
 func _pick_free_item(main: MainGame, skip: Array = []) -> SalvageItem:
 	for c in main.spawner.get_children():
-		if c is SalvageItem and not c.collected and not skip.has(c):
+		if (
+			c is SalvageItem
+			and not c.collected
+			and not skip.has(c)
+			and c.required_strength <= main.magnet.strength
+			and main.can_take(c.mass)
+		):
 			return c
 	return null
 
@@ -56,9 +67,10 @@ func _test_initial_fill(main: MainGame) -> void:
 	var types := {}
 	for c in main.spawner.get_children():
 		types[c.item_id] = true
-	_check(main.spawner.field_count() == CMConfig.MAX_ITEMS, "fill: field has MAX_ITEMS at start",
-		"count=%d" % main.spawner.field_count())
-	_check(types.has(&"nut") and types.has(&"plate"), "fill: two item types present")
+	_check(main.spawner.field_count() == CMConfig.i("field.max_items"),
+		"fill: field has max_items at start", "count=%d" % main.spawner.field_count())
+	_check(types.has(&"nut") and types.has(&"plate") and types.has(&"battery"),
+		"fill: three item types present")
 
 
 func _test_outside_radius_not_collected(main: MainGame) -> void:
@@ -91,7 +103,7 @@ func _test_inside_radius_attracts(main: MainGame) -> void:
 
 func _test_capture_collects_exactly_once(main: MainGame) -> void:
 	_center_magnet(main)
-	# F2 из ревью: прямые повторные вызовы обработчика до удаления узла.
+	# F2 из ревью CM-001: прямые повторные вызовы обработчика до удаления узла.
 	var direct := _pick_free_item(main)
 	direct.position = main.magnet.position + Vector2(7, 0)
 	var before_direct := main.collected_count
@@ -115,8 +127,8 @@ func _test_capture_collects_exactly_once(main: MainGame) -> void:
 	_check(main.collected_count == before + 1, "capture: repeated calls do not add",
 		"delta=%d" % (main.collected_count - before))
 	_check(item.collected and item.is_queued_for_deletion(), "capture: item is freed")
-	_check(main.collected_label.text == "Collected: %d" % main.collected_count,
-		"HUD counter reflects real state", main.collected_label.text)
+	_check(main.cargo_label.text.begins_with("Cargo: %d/" % main.cargo_mass),
+		"HUD cargo reflects real state", main.cargo_label.text)
 
 
 func _test_large_delta_does_not_lose_capture(main: MainGame) -> void:
@@ -133,7 +145,7 @@ func _test_large_delta_does_not_lose_capture(main: MainGame) -> void:
 func _make_heavy_item(main: MainGame) -> SalvageItem:
 	var item := SalvageItem.new()
 	item.game = main
-	item.setup({"id": &"battery", "required_strength": 2, "radius": 8.0, "color": Color("7fd0e8")})
+	item.setup({"id": &"wreck", "required_strength": 2, "mass": 8, "price": 20, "radius": 8.0, "color": Color("7fd0e8")})
 	main.spawner.add_child(item)
 	return item
 
@@ -152,7 +164,7 @@ func _test_heavy_item_stays_and_hints(main: MainGame) -> void:
 	item.free()  # синтетический предмет не влияет на счётчики поля
 
 
-## F1 из ревью: захват не должен обходить требование силы (CM-R02).
+## F1 из ревью CM-001: захват не должен обходить требование силы (CM-R02).
 func _test_heavy_item_not_captured_in_capture_radius(main: MainGame) -> void:
 	_center_magnet(main)
 	for d in [0.0, 5.0, 12.0, 13.0, 100.0]:
@@ -173,7 +185,7 @@ func _test_heavy_item_not_captured_in_capture_radius(main: MainGame) -> void:
 	var before := main.collected_count
 	for i in 30:
 		item.step(1.0 / 60.0)
-	main.magnet.strength = CMConfig.MAGNET_STRENGTH
+	main.magnet.strength = CMConfig.i("magnet.base_strength")
 	_check(main.collected_count == before + 1, "heavy capture: strength 2 allows single collection",
 		"delta=%d" % (main.collected_count - before))
 	item.free()
@@ -193,26 +205,32 @@ func _test_respawn_bounded(main: MainGame) -> void:
 	for i in 60:
 		main.spawner.step(0.1)
 		max_seen = maxi(max_seen, main.spawner.field_count())
-	_check(main.spawner.field_count() == CMConfig.MAX_ITEMS, "respawn: field refilled to cap",
+	_check(main.spawner.field_count() == CMConfig.i("field.max_items"), "respawn: field refilled to cap",
 		"count=%d" % main.spawner.field_count())
-	_check(max_seen <= CMConfig.MAX_ITEMS, "respawn: field count never exceeds cap",
+	_check(max_seen <= CMConfig.i("field.max_items"), "respawn: field count never exceeds cap",
 		"max=%d" % max_seen)
 
 
-## Активный 600-секундный цикл сбора/возрождения: каждую секунду собираем
-## 5 предметов, удаления проходят между кадрами, потолок проверяется на
-## каждом шаге — и по полю, и по реальному числу дочерних узлов.
+## Активный 600-секундный цикл сбора/возрождения (см. замечание ревью CM-001
+## о детерминированности): каждую секунду собираем до 5 предметов, удаления
+## проходят реальными кадрами, экономика живёт своим ходом (заряд → авто-возврат
+## → разгрузка → перезапуск вылета). Проверяются потолки и восстановление.
 func _test_soak_collect_respawn_600s(main: MainGame) -> void:
 	_center_magnet(main)
 	var max_children := 0
 	var max_field := 0
+	var manual_ok := 0
 	for sec in 600:
+		if main.state != MainGame.GameState.SALVAGE:
+			main.launch()
 		for i in 5:
 			var item := _pick_free_item(main)
 			if item == null:
 				break
 			item.position = main.magnet.position + Vector2(3, 0)
 			item.step(0.016)
+			if item.collected:
+				manual_ok += 1
 		await process_frame  # queue_free доводит удаления до конца между секундами
 		max_children = maxi(max_children, main.spawner.get_child_count())
 		max_field = maxi(max_field, main.spawner.field_count())
@@ -223,14 +241,15 @@ func _test_soak_collect_respawn_600s(main: MainGame) -> void:
 	for t in 120:  # хвост очереди возрождения после последнего сбора
 		await process_frame
 		main.spawner.step(0.1)
-	_check(max_field <= CMConfig.MAX_ITEMS, "soak 600s: field count capped at every step",
+	var cap := CMConfig.i("field.max_items")
+	_check(max_field <= cap, "soak 600s: field count capped at every step",
 		"max=%d" % max_field)
-	_check(max_children <= CMConfig.MAX_ITEMS, "soak 600s: real node count capped at every step",
+	_check(max_children <= cap, "soak 600s: real node count capped at every step",
 		"max=%d" % max_children)
-	_check(main.spawner.field_count() == CMConfig.MAX_ITEMS, "soak 600s: field restored to cap",
+	_check(main.spawner.field_count() == cap, "soak 600s: field restored to cap",
 		"count=%d" % main.spawner.field_count())
-	_check(main.collected_count >= 3000, "soak 600s: at least 3000 collections happened",
-		"collected=%d" % main.collected_count)
+	_check(manual_ok >= 2500, "soak 600s: at least 2500 manual collections registered",
+		"manual=%d" % manual_ok)
 
 
 func _test_field_clamp() -> void:

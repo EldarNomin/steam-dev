@@ -1,9 +1,15 @@
-"""CI gameplay evidence driver (Linux/X11).
+"""CI gameplay evidence driver (Linux/X11) for CM-002.
 
 Moves the real mouse over the game window via xdotool while Godot runs
 with --write-movie, so the recorded AVI contains true rendered gameplay.
 Window is assumed at (0,0) without decorations (Xvfb, no WM): canvas
 coordinates equal screen coordinates.
+
+The 200s timeline sweeps the field and periodically clicks the fixed UI
+positions of LAUNCH and the first upgrade button. Clicks are state-safe:
+LAUNCH is hidden in SALVAGE and the shop is disabled outside DOCK, so
+ stray clicks are no-ops; this drives a full economy loop on camera:
+collect -> auto/manual return -> buy strength -> relaunch.
 
 Usage: python3 tools/mouse_timeline.py [duration_seconds]
 """
@@ -12,40 +18,45 @@ import subprocess
 import sys
 import time
 
-DURATION = float(sys.argv[1]) if len(sys.argv) > 1 else 26.0
+DURATION = float(sys.argv[1]) if len(sys.argv) > 1 else 200.0
+
+# Фиксированные центры кнопок правой панели (canvas coords).
+BTN_LAUNCH = (1130, 680)
+BTN_STRENGTH = (1130, 138)
 
 
 def field_point(t: float):
-    """Canvas coords inside the play field + UI hovers (clamping proof)."""
-    if t < 8.0:
-        return (460 + 430 * math.sin(2 * math.pi * t / 7.0),
-                300 + 200 * math.sin(4 * math.pi * t / 7.0 + math.pi / 3))
-    if t < 10.0:  # над правой панелью — магнит обязан остаться в поле
-        return (1100.0, 350.0)
-    if t < 16.0:
-        u = t - 10.0
-        return (490 + 420 * math.sin(2 * math.pi * u / 6.0 + 1.2),
-                380 + 220 * math.sin(4 * math.pi * u / 6.0 + 0.4))
-    if t < 18.0:  # над верхним HUD
-        return (400.0, 20.0)
-    u = t - 18.0
-    return (200 + 680 * (0.5 + 0.5 * math.sin(2 * math.pi * u / 2.0)),
-            200 + 420 * (0.5 + 0.5 * math.sin(2 * math.pi * u / 1.3 + 2.0)))
+    """Canvas coords inside the play field."""
+    period = 11.0
+    return (460 + 430 * math.sin(2 * math.pi * t / period),
+            300 + 200 * math.sin(4 * math.pi * t / period + math.pi / 3))
+
+
+def click(x: float, y: float) -> None:
+    subprocess.run(["xdotool", "mousemove", str(int(x)), str(int(y))], check=False)
+    subprocess.run(["xdotool", "click", "1"], check=False)
 
 
 def main() -> None:
     t0 = time.time()
+    next_strength_click = 6.0
+    next_launch_click = 2.0
     while True:
         t = time.time() - t0
         if t >= DURATION:
             break
+        if t >= next_launch_click:
+            click(*BTN_LAUNCH)
+            next_launch_click += 9.0
+            continue
+        if t >= next_strength_click:
+            click(*BTN_STRENGTH)
+            next_strength_click += 4.0
+            continue
         x, y = field_point(t)
-        # xdotool не принимает отрицательных координат; курсор за экраном
-        # всё равно был бы прижат ОС, поэтому явно клампим к границам Xvfb.
         x = max(0, min(1399, int(x)))
         y = max(0, min(799, int(y)))
-        subprocess.run(["xdotool", "mousemove", str(x), str(y)],
-                       check=False)
+        subprocess.run(["xdotool", "mousemove", str(x), str(y)], check=False)
         time.sleep(0.01)
     print("mouse timeline done: %.1fs" % DURATION)
 
