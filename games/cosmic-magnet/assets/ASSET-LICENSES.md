@@ -9,3 +9,5 @@
 Derelict: isolated horizontal abandoned industrial spacecraft, orthographic three-quarter view; weathered slate-blue and copper panels, exposed pipes, breached hull, amber portholes, cyan rim highlights; crisp hand-painted 2D game asset, transparent background, no UI/text/stars.
 
 Magnet: isolated top-down symmetric magnetic salvage drone; four golden-orange claws, silver-blue beveled armor, black mechanism, central white-cyan reactor; crisp hand-painted 2D game asset readable at 60px, transparent background, no UI/text/scene.
+
+- `art/skiff.svg`: оригинальная векторная графика Codex для этого проекта (2026-10-11); внешний референс/сторонний ассет не использовался. Исходник включён в репозиторий.

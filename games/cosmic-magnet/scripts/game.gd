@@ -218,7 +218,7 @@ func register_collection(item: SalvageItem) -> void:
 		return
 	if item.discovery != &"" and (site == null or not site.can_collect(item)):
 		return
-	if item.discovery == &"skiff" and not pulse.affects(item):
+	if item.discovery == &"skiff" and (not pulse.affects(item) or item.position.distance_to(site.extraction_pos()) > CMConfig.f("site.extraction_radius")):
 		return
 	item.collected = true
 	if has_node("Presentation"):

@@ -67,6 +67,7 @@ func _pick_free_item(main: MainGame, skip: Array = []) -> SalvageItem:
 		if (
 			c is SalvageItem
 			and not c.collected
+			and c.discovery == &""  # ordinary collection soak; scenario hardware is tested in test_hook
 			and not skip.has(c)
 			and c.required_strength <= main.magnet.strength
 			and main.can_take(c.mass)

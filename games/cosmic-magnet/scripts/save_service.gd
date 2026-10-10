@@ -189,6 +189,23 @@ static func valid_hook(d: Variant) -> bool:
 		seen[int(id)] = true
 	if d["module_found"] and ids.size() != CMConfig.i("site.cover_count"):
 		return false
+	if d.has("released"):
+		var released_ids: Variant = d["released"]
+		if not released_ids is Array or (not released_ids.is_empty() and not d["module_found"]):
+			return false
+		var unique_ids := {}
+		for id in released_ids:
+			if not _is_integral(id) or int(id) < 0 or int(id) >= CMConfig.i("site.clamp_count") or unique_ids.has(int(id)):
+				return false
+			unique_ids[int(id)] = true
+		if d["skiff_recovered"] and released_ids.size() != CMConfig.i("site.clamp_count"):
+			return false
+	if d.has("skiff_position"):
+		var pos: Variant = d["skiff_position"]
+		if not pos is Array or pos.size() != 2 or not (pos[0] is float or pos[0] is int) or not (pos[1] is float or pos[1] is int):
+			return false
+		if not is_finite(float(pos[0])) or not is_finite(float(pos[1])) or not CMConfig.FIELD_RECT.has_point(Vector2(float(pos[0]),float(pos[1]))):
+			return false
 	return not d["skiff_recovered"] or d["module_found"]
 
 

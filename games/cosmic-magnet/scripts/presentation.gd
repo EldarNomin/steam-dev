@@ -144,7 +144,7 @@ func _configure() -> void:
 	end_panel.add_theme_stylebox_override("panel", _box(Color("0b202d"), GOLD, 12))
 	completion.add_child(end_panel)
 	_label(end_panel, "SKIFF RECOVERED", Vector2(32, 30), Vector2(535, 40), 30, GOLD)
-	_label(end_panel, "You uncovered a signal, built a chain magnet\nand brought a lost ship home.\n\n+100 scrap  /  Your progress is saved.", Vector2(32, 90), Vector2(535, 110), 18, Color("d7e2e5"))
+	_label(end_panel, "You uncovered a signal, broke the moorings\nand towed a lost ship to safety.\n\n+100 scrap  /  Your progress is saved.", Vector2(32, 90), Vector2(535, 110), 18, Color("d7e2e5"))
 	var back := Button.new()
 	back.text = "BACK TO DOCK"
 	back.position = Vector2(32, 224)

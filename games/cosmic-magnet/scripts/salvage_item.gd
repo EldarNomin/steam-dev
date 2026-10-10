@@ -17,6 +17,7 @@ var color := Color.WHITE
 var collected := false
 ## Уникальная находка (CM-R08): спавнится один раз за забег, не возрождается.
 var is_unique := false
+var clamp_id := -1
 var cover_id := -1
 var discovery: StringName = &""
 
@@ -43,6 +44,9 @@ func _physics_process(delta: float) -> void:
 func step(delta: float) -> void:
 	if collected or game == null:
 		return
+	if discovery in [&"relay", &"clamp"]:
+		queue_redraw()
+		return
 	if item_id != &"skiff":
 		rotation += 0.4 * delta
 	_pull = maxf(_pull - delta * 2.0, 0.0)
@@ -63,7 +67,7 @@ func step(delta: float) -> void:
 	# Уникальная находка не занимает груз — гейт ёмкости к ней не применяется.
 	var fits := game.can_take(mass) or (is_unique and discovery != &"skiff")
 	if discovery != &"" and game.site != null and not game.site.can_collect(self):
-		_hint = "MODULE?" if discovery == &"skiff" and not game.site.module_found else "PULSE?" if discovery == &"skiff" and not game.pulse.unlocked() else "FULL" if not fits else "S%d?" % required_strength
+		_hint = "MODULE?" if discovery == &"skiff" and not game.site.module_found else "PULSE?" if discovery == &"skiff" and not game.pulse.unlocked() else "CHAIN" if discovery == &"skiff" and game.site.released.size() < CMConfig.i("site.clamp_count") else "FULL" if not fits else "S%d?" % required_strength
 		queue_redraw()
 		return
 	_hint = ""
@@ -75,8 +79,9 @@ func step(delta: float) -> void:
 		queue_redraw()
 		return
 
-	if discovery == &"skiff" and not game.pulse.affects(self):
-		_hint = "PULSE"
+	if discovery == &"skiff":
+		_hint = "PULSE" if not game.pulse.affects(self) else "TOW"
+		game.site.tow(self,delta)
 		queue_redraw()
 		return
 
@@ -135,9 +140,19 @@ const ART := {
 }
 
 func _draw() -> void:
+	if discovery in [&"relay", &"clamp"]:
+		draw_set_transform(Vector2.ZERO,-rotation)
+		var tint := Color("62e7d4") if discovery == &"relay" else Color("ef955f")
+		draw_circle(Vector2.ZERO,17,Color("102631"))
+		draw_arc(Vector2.ZERO,17,0,TAU,32,tint,2,true)
+		draw_line(Vector2(-7,0),Vector2(7,0),tint,3,true)
+		if discovery == &"relay":
+			draw_line(Vector2(0,-7),Vector2(0,7),tint,3,true)
+		draw_string(ThemeDB.fallback_font,Vector2(-35,33),"RELAY" if discovery == &"relay" else "CLAMP",HORIZONTAL_ALIGNMENT_CENTER,70,11,tint)
+		return
 	var t := Time.get_ticks_msec() / 1000.0
 	var size := visual_radius * 3.8 * (1.0 + 0.10 * _pull)
-	var texture: Texture2D = preload("res://assets/art/derelict.webp") if item_id == &"skiff" else ART.get(item_id, ART[&"nut"])
+	var texture: Texture2D = preload("res://assets/art/skiff.svg") if item_id == &"skiff" else ART.get(item_id, ART[&"nut"])
 	# Мягкий бобинг поверх геймплейной позиции (только отрисовка).
 	draw_set_transform(Vector2(0.0, sin(t * 1.7 + _phase) * 2.5), rotation, Vector2.ONE)
 	if cover_id >= 0:
