@@ -44,7 +44,7 @@ godot --headless --path games/cosmic-magnet --quit-after 120
 godot --headless --path games/cosmic-magnet --script tests/test_core.gd
 # тесты экономики (61 проверка, включая benchmark темпа первой покупки)
 godot --headless --path games/cosmic-magnet --script tests/test_economy.gd
-# тесты сохранения (23 проверки; временный профиль, не сохранение игрока)
+# тесты сохранения (54 проверки; временный профиль, не сохранение игрока)
 godot --headless --path games/cosmic-magnet --script tests/test_save.gd
 # играть: меню → NEW GAME/CONTINUE, LAUNCH в доке, Esc — пауза
 godot --path games/cosmic-magnet

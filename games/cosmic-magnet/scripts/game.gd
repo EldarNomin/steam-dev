@@ -180,18 +180,22 @@ func register_collection(item: SalvageItem) -> void:
 	if cargo_mass + item.mass > capacity():
 		return
 	item.collected = true
-	cargo_mass += item.mass
-	cargo_value += item.price
 	collected_count += 1
 	if tutorial_stage < 2:
 		tutorial_stage = 2
 	if item.is_unique:
-		# Уникальная находка (CM-R08): в очередь возрождения не попадает,
-		# факт находки сохраняется немедленно (CM-R10 «важная находка»).
+		# Уникальная находка (CM-R08): не проходит через груз — стоимость
+		# начисляется сразу, иначе закрытие посреди вылета потеряло бы её
+		# навсегда (F2 ревью CM-003). Факт находки сохраняется немедленно.
+		economy.scrap += item.price
 		unique_collected = true
 		save_now()
-	else:
-		spawner.notify_collected()
+		item.queue_free()
+		notify_hud()
+		return
+	cargo_mass += item.mass
+	cargo_value += item.price
+	spawner.notify_collected()
 	item.queue_free()
 	var full := cargo_mass >= capacity()
 	notify_hud()
@@ -304,8 +308,11 @@ func _show_menu() -> void:
 func continue_game() -> void:
 	var data := SaveService.load_data()
 	if data.is_empty():
-		# Битый/отсутствующий сейв — безопасный старт нового забега (CM-R12).
-		new_game()
+		# Повреждённые main и .bak (F4): молча перезаписывать их новым забегом
+		# нельзя — требуется явное подтверждение; диагностические *.corrupt
+		# уже сохранены SaveService. Отсутствие сейва сюда не попадает
+		# (кнопка Continue задизейблена без файлов).
+		new_game_confirm.visible = true
 		return
 	economy.scrap = int(data.get("scrap", 0))
 	economy.restore_levels(data.get("levels", {}))

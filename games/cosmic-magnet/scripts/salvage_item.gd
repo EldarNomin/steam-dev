@@ -52,7 +52,8 @@ func step(delta: float) -> void:
 	# Невлезающий в трюм — остаётся на поле с подсказкой FULL (SPEC: груз не
 	# превышает ёмкость).
 	var can_lift := required_strength <= magnet_node.strength
-	var fits := game.can_take(mass)
+	# Уникальная находка не занимает груз — гейт ёмкости к ней не применяется.
+	var fits := game.can_take(mass) or is_unique
 	_hint = ""
 	if not can_lift and dist <= magnet_node.attraction_radius:
 		_hint = "S%d?" % required_strength
