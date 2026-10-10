@@ -156,13 +156,14 @@ func _draw() -> void:
 		for obj in hardware:
 			if is_instance_valid(obj) and not obj.collected and obj.discovery == &"clamp":
 				draw_line(obj.position,skiff_location,Color(1,0.5,0.25,0.5),2,true)
-	var progress := float(cleared.size()) / CMConfig.i("site.cover_count")
-	draw_arc(module_pos, CMConfig.f("site.radius"), 0, TAU, 64, Color(0.5,0.85,0.8,0.12),1,true)
-	if progress > 0:
-		draw_arc(module_pos, CMConfig.f("site.radius"), -PI/2, -PI/2+progress*TAU,64,Color(0.95,0.72,0.4,0.45),2,true)
-	if not module_found and cleared.size() < CMConfig.i("site.cover_count"):
-		draw_texture_rect(preload("res://assets/art/relic.svg"),Rect2(module_pos-Vector2(22,22),Vector2(44,44)),false,Color(1,1,1,0.12))
-		draw_string(ThemeDB.fallback_font,module_pos+Vector2(-60,30),"BURIED SIGNAL",HORIZONTAL_ALIGNMENT_CENTER,120,11,Color("9b8460"))
+	if not module_found:
+		var progress := float(cleared.size()) / CMConfig.i("site.cover_count")
+		draw_arc(module_pos,CMConfig.f("site.radius"),0,TAU,64,Color(0.5,0.85,0.8,0.12),1,true)
+		if progress > 0:
+			draw_arc(module_pos,CMConfig.f("site.radius"),-PI/2,-PI/2+progress*TAU,64,Color(0.95,0.72,0.4,0.45),2,true)
+		if cleared.size() < CMConfig.i("site.cover_count"):
+			VoidArt.draw_sheet(self,VoidArt.MODULE,Rect2(module_pos-Vector2(22,22),Vector2(44,44)),game.visual_time,Vector2(32,32),Color(1,1,1,0.16))
+			draw_string(ThemeDB.fallback_font,module_pos+Vector2(-60,30),"BURIED SIGNAL",HORIZONTAL_ALIGNMENT_CENTER,120,11,Color("9b8460"))
 
 func extraction_pos() -> Vector2:
 	return Vector2(CMConfig.f("site.extraction_x"), CMConfig.f("site.extraction_y"))

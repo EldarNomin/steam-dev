@@ -32,6 +32,24 @@ func run() -> void:
 	game = preload("res://scenes/main.tscn").instantiate()
 	root.add_child(game)
 	game.new_game()
+	game.set_process(false)
+	game.visual_time = 0.0
+	game._process(0.5)
+	check(game.visual_time == 0.5, "Void animation advances with simulation delta")
+	game.is_paused = true
+	game._process(5.0)
+	check(game.visual_time == 0.5, "Void animation freezes during pause")
+	game.is_paused = false
+	game.menu_visible = true
+	game._process(5.0)
+	check(game.visual_time == 0.5, "Void animation freezes in menu")
+	game.menu_visible = false
+	var frames_valid := true
+	for texture in [VoidArt.POWER,VoidArt.BATTERY,VoidArt.MODULE,VoidArt.RELAY]:
+		for tick in 120:
+			var rect := VoidArt.frame(texture,float(tick)/10,Vector2(texture.get_height(),texture.get_height()))
+			frames_valid = frames_valid and rect.position.x >= 0 and rect.end.x <= texture.get_width()
+	check(frames_valid, "Void animation regions stay inside source sheets across loops")
 	game.set_physics_process(false)
 	game.spawner.set_physics_process(false)
 	game.magnet.set_physics_process(false)

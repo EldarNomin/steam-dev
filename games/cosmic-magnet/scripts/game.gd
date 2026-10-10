@@ -11,8 +11,6 @@ extends Node2D
 enum GameState { DOCK, SALVAGE }
 
 const FIELD_BG := Color("071422")
-const SPACE_ART := preload("res://assets/art/space.svg")
-const STAR_COLOR := Color(1.0, 1.0, 1.0, 0.16)
 const DEFAULT_VOLUME := 0.8
 
 var state: GameState = GameState.DOCK
@@ -32,8 +30,8 @@ var unique_collected := false
 var tutorial_stage := 0
 var master_volume := DEFAULT_VOLUME
 
+var visual_time := 0.0
 var menu_visible := true
-var _stars: PackedVector2Array = []
 
 @onready var magnet: Magnet = $Magnet
 @onready var spawner: Spawner = $ItemField
@@ -63,14 +61,8 @@ var _stars: PackedVector2Array = []
 
 
 func _ready() -> void:
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	randomize()
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 20261008
-	for i in 330:
-		var r := CMConfig.FIELD_RECT.grow(-6.0)
-		_stars.append(
-			Vector2(rng.randf_range(r.position.x, r.end.x), rng.randf_range(r.position.y, r.end.y))
-		)
 	charge = max_charge()
 	_apply_stats()
 	magnet.visible = false
@@ -102,17 +94,10 @@ func _ready() -> void:
 
 
 func _draw() -> void:
-	draw_texture_rect(SPACE_ART, CMConfig.FIELD_RECT, false)
-	var now := Time.get_ticks_msec() / 1000.0
-	for i in _stars.size():
-		var star := _stars[i]
-		var twinkle := 0.75 + 0.25 * sin(now * (0.9 + float(i % 5) * 0.35) + float(i) * 1.3)
-		var brightness := (0.15 + float(i % 9) * 0.055) * twinkle
-		var radius := 0.65 if i % 7 != 0 else 1.25
-		draw_circle(star, radius, Color(0.65, 0.83, 0.95, brightness))
-		if i % 37 == 0:
-			draw_line(star - Vector2(3, 0), star + Vector2(3, 0), Color(0.6, 0.9, 1.0, 0.35), 1.0, true)
-			draw_line(star - Vector2(0, 3), star + Vector2(0, 3), Color(0.6, 0.9, 1.0, 0.35), 1.0, true)
+	# Quiet animated Void layers; the field and objects remain real game nodes.
+	VoidArt.draw_sheet(self, VoidArt.BACKGROUND, CMConfig.FIELD_RECT, visual_time, Vector2(640,360), Color("858da9"), 1.5)
+	VoidArt.draw_sheet(self, VoidArt.STARS, CMConfig.FIELD_RECT, visual_time, Vector2(640,360), Color(1,1,1,0.35), 1.5)
+	VoidArt.draw_sheet(self, VoidArt.PLANET, Rect2(30,510,192,192), visual_time, Vector2(96,96), Color(0.55,0.65,0.8,0.65), 8.0)
 	if state == GameState.SALVAGE and spawner != null:
 		for item in spawner.get_children():
 			if item is SalvageItem and not item.collected and item.required_strength <= magnet.strength and (item.is_unique or can_take(item.mass)):
@@ -125,6 +110,8 @@ func _draw() -> void:
 					draw_circle(item.position.lerp(magnet.position, t), 1.8, Color(0.7, 1.0, 0.97, alpha))
 
 func _process(_delta: float) -> void:
+	if not is_paused and not menu_visible:
+		visual_time += _delta
 	queue_redraw()
 	if site != null:
 		site.queue_redraw()

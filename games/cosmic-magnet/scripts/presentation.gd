@@ -110,7 +110,7 @@ func _configure() -> void:
 	side.get_node("TitleLabel").text = "UPGRADE BAY"
 	side.get_node("TitleLabel").add_theme_font_size_override("font_size", 21)
 	var buttons: Array[Button] = [game.strength_button, game.radius_button, game.capacity_button]
-	var icons: Array[Texture2D] = [preload("res://assets/art/magnet.webp"), preload("res://assets/art/radius.svg"), preload("res://assets/art/capacity.svg")]
+	var icons: Array[Texture2D] = [preload("res://assets/void/magnet.svg"), preload("res://assets/art/radius.svg"), preload("res://assets/art/capacity.svg")]
 	for i in buttons.size():
 		var button := buttons[i]
 		button.position = Vector2(16, 56 + i * 92)
@@ -158,7 +158,7 @@ func _configure() -> void:
 	game.status_label.add_theme_font_size_override("font_size", 12)
 	_label(side, "THE FINAL SALVAGE", Vector2(20, 435), Vector2(260, 23), 12, GOLD)
 	var goal := TextureRect.new()
-	goal.texture = preload("res://assets/art/derelict.webp")
+	goal.texture = VoidArt.DERELICT
 	goal.position = Vector2(20, 458)
 	goal.size = Vector2(116, 50)
 	goal.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
