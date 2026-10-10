@@ -1,0 +1,2 @@
+# Small QA clip is stored directly; scope stays within this evidence folder.
+*.mp4 -filter -diff -merge -text
