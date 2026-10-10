@@ -8,7 +8,7 @@
 | CM-002 | ACCEPTED | PR #4; проверен `9df3ae9dee64930d119544af2c3db82b8a140f83`. Решение: `docs/reports/CM-002-review.md` (финальная приёмка). |
 | CM-003 | ACCEPTED | PR #5; головы `d75af84` → `58e4022` (F1–F4) → `b926bc7` (F5 атомарный .bak). Все замечания закрыты, решение Codex на `b926bc7` (передано Эльдаром). |
 | CM-004 | READY_FOR_REVIEW | PR #6, повторная сдача на `987ae7456e9bbc167c0011e87136171fa8179874`: F1 (шаблоны ставятся независимо от кеша, проверка существования), F2 (wrapper mode 2 → в ZIP оба exe), F3 (отчёт: SHA, команды, run/artifact ID этой ревизии). Закрытие F1: два Windows-run — 38073114861 (cache miss) и 38073498841 (**cache hit**, экспорт/smoke success); артефакт 11677846540 = CosmicMagnet.exe + .console.exe, локальный запуск main exe без Godot — окно живо. Отчёт: `docs/reports/CM-004-implementation.md` |
-| CM-005 | LOCKED | После решения CONTINUE по CM-004 |
+| CM-005 | IN_PROGRESS | По прямому поручению Эльдара 2026-10-10 начат отдельный визуальный срез в `feat/cosmic-magnet/visual-refresh`: новые спрайты, интерфейс и эффекты; локально import/smoke и 158 проверок PASS. Арт готов к просмотру: `docs/reports/visual-refresh-implementation.md`. Звук/уменьшение эффектов и полная приёмка этапа остаются; решение CONTINUE по CM-004 не заявляется. |
 | CM-006 | LOCKED | После приёмки CM-005 |
 | CM-007 | LOCKED | После приёмки CM-006 |
 | CM-008 | LOCKED | После приёмки CM-007 |

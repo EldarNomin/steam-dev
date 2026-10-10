@@ -44,15 +44,16 @@ static func clamp_to_field(pos: Vector2) -> Vector2:
 	)
 
 
+const MAGNET_ART := preload("res://assets/art/magnet.webp")
+
 func _draw() -> void:
-	# Радиус притяжения — бирюзовое кольцо (палитра концепта).
-	draw_arc(Vector2.ZERO, attraction_radius, 0.0, TAU, 96, Color(0.22, 0.78, 0.76, 0.28), 1.5)
-	# Радиус захвата.
-	draw_circle(Vector2.ZERO, CMConfig.f("magnet.capture_radius"), Color(0.43, 0.95, 0.93, 0.35))
-	# Корпус магнита — простая заглушка.
-	draw_circle(Vector2.ZERO, 14.0, Color("c7d3e0"))
-	draw_circle(Vector2.ZERO, 14.0, Color("5d6b7d"), false, 2.0)
-	draw_circle(Vector2.ZERO, 5.0, Color("2b3b4d"))
-	# Янтарные полюса.
-	draw_rect(Rect2(-11.0, -16.0, 7.0, 8.0), Color("e8a33d"))
-	draw_rect(Rect2(4.0, -16.0, 7.0, 8.0), Color("e8a33d"))
+	var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 500.0)
+	for i in range(5, 0, -1):
+		draw_circle(Vector2.ZERO, 22.0 + i * 8.0, Color(0.15, 0.95, 0.85, 0.014))
+	# Exact gameplay radius, broken into restrained instrument marks.
+	for i in 48:
+		var begin := float(i) / 48.0 * TAU
+		draw_arc(Vector2.ZERO, attraction_radius, begin, begin + TAU / 96.0, 4, Color(0.32, 0.93, 0.85, 0.38), 1.0, true)
+	draw_arc(Vector2.ZERO, attraction_radius - 4.0, -0.4 + pulse * 0.1, 0.4 + pulse * 0.1, 24, Color(0.55, 1.0, 0.94, 0.5), 1.3, true)
+	draw_texture_rect(MAGNET_ART, Rect2(-32, -32, 64, 64), false)
+	draw_circle(Vector2.ZERO, 4.0, Color(0.75, 1.0, 0.98, 0.15 + pulse * 0.12))

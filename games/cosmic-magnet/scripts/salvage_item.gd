@@ -103,40 +103,32 @@ func _collect() -> void:
 	game.register_collection(self)
 
 
+const ART := {
+	&"nut": preload("res://assets/art/nut.svg"),
+	&"plate": preload("res://assets/art/plate.svg"),
+	&"battery": preload("res://assets/art/battery.svg"),
+	&"relic_core": preload("res://assets/art/relic.svg"),
+}
+
 func _draw() -> void:
-	if item_id == &"plate":
-		var half := visual_radius * 0.8
-		draw_rect(Rect2(-half, -half * 0.62, half * 2.0, half * 1.24), color)
-		draw_rect(
-			Rect2(-half, -half * 0.62, half * 2.0, half * 1.24),
-			Color(0.1, 0.1, 0.12),
-			false,
-			1.5,
-		)
-	elif item_id == &"battery":
-		draw_rect(Rect2(-visual_radius * 0.55, -visual_radius, visual_radius * 1.1, visual_radius * 2.0), color)
-		draw_rect(
-			Rect2(-visual_radius * 0.55, -visual_radius, visual_radius * 1.1, visual_radius * 2.0),
-			Color(0.1, 0.1, 0.12),
-			false,
-			1.5,
-		)
-		draw_rect(Rect2(-visual_radius * 0.2, -visual_radius - 3.0, visual_radius * 0.4, 3.0), color)
-	else:
-		draw_circle(Vector2.ZERO, visual_radius, color)
-		draw_circle(Vector2.ZERO, visual_radius * 0.42, Color("1c2438"))
+	var size := visual_radius * 3.8
+	var texture: Texture2D = ART.get(item_id, ART[&"nut"])
 	if is_unique:
-		# Пульсирующие янтарные кольца — находку видно издалека.
-		var pulse := 1.4 + 0.35 * sin(Time.get_ticks_msec() / 240.0)
-		draw_arc(Vector2.ZERO, visual_radius * pulse, 0.0, TAU, 40, Color("ffd166"), 2.0)
-		draw_arc(Vector2.ZERO, visual_radius * pulse * 1.6, 0.0, TAU, 40, Color(1.0, 0.82, 0.4, 0.35), 1.5)
+		var pulse := 1.0 + 0.12 * sin(Time.get_ticks_msec() / 450.0)
+		for i in range(4, 0, -1):
+			draw_circle(Vector2.ZERO, size * (0.65 + i * 0.13) * pulse, Color(1.0, 0.7, 0.25, 0.018))
+		draw_arc(Vector2.ZERO, size * 0.85 * pulse, 0.0, TAU, 48, Color(1.0, 0.78, 0.36, 0.55), 1.0, true)
+	draw_texture_rect(texture, Rect2(Vector2.ONE * -size * 0.5, Vector2.ONE * size), false)
 	if _hint != "":
-		draw_string(
-			ThemeDB.fallback_font,
-			Vector2(-18.0, -visual_radius - 6.0),
-			_hint,
-			HORIZONTAL_ALIGNMENT_CENTER,
-			36.0,
-			11,
-			Color("e8a33d"),
-		)
+		# Cancel object rotation so the requirement is always readable.
+		draw_set_transform(Vector2.ZERO, -rotation)
+		draw_style_box(_hint_box(), Rect2(-22, -size * 0.6 - 19, 44, 18))
+		draw_string(ThemeDB.fallback_font, Vector2(-21, -size * 0.6 - 6), _hint, HORIZONTAL_ALIGNMENT_CENTER, 42, 11, Color("ffd490"))
+
+func _hint_box() -> StyleBoxFlat:
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color("101f2b")
+	box.border_color = Color("6f5841")
+	box.set_border_width_all(1)
+	box.set_corner_radius_all(3)
+	return box

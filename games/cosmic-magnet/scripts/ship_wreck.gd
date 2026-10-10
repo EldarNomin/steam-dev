@@ -22,30 +22,16 @@ func _ready() -> void:
 	])
 
 
+const SHIP_ART := preload("res://assets/art/derelict.webp")
+
 func _draw() -> void:
-	# Корпус-обломок.
-	draw_colored_polygon(_points, HULL)
-	for i in _points.size():
-		draw_line(_points[i], _points[(i + 1) % _points.size()], HULL_EDGE, 2.0)
-	# Надстройка и антенны.
-	draw_rect(Rect2(-30, -52, 44, 24), HULL)
-	draw_rect(Rect2(-30, -52, 44, 24), HULL_EDGE, false, 2.0)
-	draw_line(Vector2(-12, -52), Vector2(-12, -74), HULL_EDGE, 2.0)
-	draw_line(Vector2(6, -52), Vector2(6, -68), HULL_EDGE, 2.0)
-	# Трещина корпуса — корабль заброшен.
-	draw_line(Vector2(-20, -30), Vector2(-2, 4), Color(0, 0, 0, 0.5), 3.0)
-	draw_line(Vector2(-2, 4), Vector2(12, 28), Color(0, 0, 0, 0.5), 3.0)
-	# Янтарные окна (часть погасла).
-	for x in [-58, -38, -18, 2, 22, 42]:
-		var lit: bool = fmod(absf(x * 7.3), 10.0) > 3.5
-		var c := WINDOW if lit else Color(WINDOW, 0.15)
-		draw_rect(Rect2(x - 3, -12, 6, 5), c)
-	# Плашка с требованием (CM-R09: сообщение о нужной силе).
-	var reachable := game != null and game.magnet.strength >= CMConfig.ship_strength()
-	var line1 := "FINAL SHIP — requires strength %d" % CMConfig.ship_strength()
-	var line2 := (
-		"Approach to dock" if reachable else "Locked: not reachable in this prototype fragment"
-	)
-	var text_color := Color("37c8c3") if reachable else Color(0.62, 0.7, 0.82, 0.85)
-	draw_string(ThemeDB.fallback_font, Vector2(-104, 52), line1, HORIZONTAL_ALIGNMENT_LEFT, 220.0, 13, text_color)
-	draw_string(ThemeDB.fallback_font, Vector2(-104, 70), line2, HORIZONTAL_ALIGNMENT_LEFT, 220.0, 11, Color(0.62, 0.7, 0.82, 0.7))
+	# Separate transparent sprite, not a background containing fake UI.
+	draw_texture_rect(SHIP_ART, Rect2(-205, -82, 410, 164), false, Color.WHITE)
+	var panel := StyleBoxFlat.new()
+	panel.bg_color = Color(0.025, 0.055, 0.085, 0.9)
+	panel.border_color = Color(0.6, 0.4, 0.22, 0.75)
+	panel.set_border_width_all(1)
+	panel.set_corner_radius_all(5)
+	draw_style_box(panel, Rect2(-160, 88, 320, 48))
+	draw_string(ThemeDB.fallback_font, Vector2(-145, 108), "DERELICT  /  STRENGTH %d" % CMConfig.ship_strength(), HORIZONTAL_ALIGNMENT_LEFT, 290, 13, Color("efc081"))
+	draw_string(ThemeDB.fallback_font, Vector2(-145, 126), "Final target · locked in this fragment", HORIZONTAL_ALIGNMENT_LEFT, 290, 11, Color("92a7b6"))
