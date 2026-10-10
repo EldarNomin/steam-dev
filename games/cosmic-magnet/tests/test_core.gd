@@ -275,11 +275,15 @@ func _test_magnet_visual_state_reset(main: MainGame) -> void:
 	main.magnet.flash()
 	_check(main.magnet._flash > 0.0, "visual: flash set by collection hook", "")
 	_check(main.magnet._trail.size() == 1, "visual: trail records flight", "")
+	main.request_return()
+	_check(main.state == MainGame.GameState.DOCK, "visual: decay probe is in dock", "")
 	main.magnet._physics_process(2.0)  # 2 с в DOCK: вспышка обязана погаснуть
 	_check(main.magnet._flash == 0.0, "visual: flash decays in dock",
 		"flash=%f" % main.magnet._flash)
 	main.request_return()  # штатный возврат в док
+	main.magnet.flash()    # новый вылет сразу после сбора, без ожидания
 	main.launch()          # вылет №2 — чистый старт
+	_check(main.magnet._flash == 0.0, "visual: flash cleared on immediate sortie", "")
 	_check(main.magnet._trail.is_empty(), "visual: trail cleared on new sortie", "")
 	main.magnet.position = Vector2(420, 300)
 	main.magnet._trail.push_front(Vector2(420, 300))
@@ -288,6 +292,12 @@ func _test_magnet_visual_state_reset(main: MainGame) -> void:
 		str(main.magnet.to_local(Vector2(420, 300))))
 	main.magnet.reset_trail()
 	main.request_return()
+	main.magnet.flash()
+	main.new_game()
+	_check(main.magnet._flash == 0.0, "visual: new game clears flash", "")
+	main.magnet.flash()
+	main.continue_game()
+	_check(main.magnet._flash == 0.0, "visual: continue clears flash", "")
 
 
 func _test_field_clamp() -> void:

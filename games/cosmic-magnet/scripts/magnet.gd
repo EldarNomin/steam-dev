@@ -33,6 +33,7 @@ func flash() -> void:
 ## и старый след не должен тянуться за ним (F3 ревью visual-polish).
 func reset_trail() -> void:
 	_trail.clear()
+	_flash = 0.0
 	queue_redraw()
 
 
