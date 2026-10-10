@@ -10,6 +10,10 @@ var attraction_radius := 100.0
 
 var game: MainGame
 var _target := Vector2.ZERO
+## Затухающая вспышка сбора (0..1): кольцо-волна и подсветка корпуса.
+var _flash := 0.0
+## Короткий хвост из последних позиций — движение читается плавнее.
+var _trail: Array[Vector2] = []
 
 
 func _ready() -> void:
@@ -19,11 +23,22 @@ func _ready() -> void:
 	_target = position
 
 
+## Визуальный хук: presentation вызывает при успешном сборе.
+func flash() -> void:
+	_flash = 1.0
+	queue_redraw()
+
+
 func _physics_process(delta: float) -> void:
 	if game == null or game.state != MainGame.GameState.SALVAGE:
 		return
 	_target = clamp_to_field(get_global_mouse_position())
 	position = position.move_toward(_target, CMConfig.f("magnet.follow_speed") * delta)
+	_trail.push_front(position)
+	if _trail.size() > 9:
+		_trail.resize(9)
+	if _flash > 0.0:
+		_flash = maxf(_flash - delta * 2.2, 0.0)
 	queue_redraw()
 
 
@@ -47,13 +62,29 @@ static func clamp_to_field(pos: Vector2) -> Vector2:
 const MAGNET_ART := preload("res://assets/art/magnet.webp")
 
 func _draw() -> void:
-	var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 500.0)
+	var t := Time.get_ticks_msec() / 1000.0
+	var pulse := 0.5 + 0.5 * sin(t * 2.0)
+	# Хвост: тающие круги по последним позициям (под корпусом).
+	for i in _trail.size():
+		var fade := (1.0 - float(i) / float(_trail.size())) * 0.10
+		draw_circle(_trail[i], 10.0 + i * 1.2, Color(0.45, 1.0, 0.94, fade))
 	for i in range(5, 0, -1):
-		draw_circle(Vector2.ZERO, 22.0 + i * 8.0, Color(0.15, 0.95, 0.85, 0.014))
+		draw_circle(Vector2.ZERO, 22.0 + i * 8.0, Color(0.15, 0.95, 0.85, 0.014 + _flash * 0.02))
 	# Exact gameplay radius, broken into restrained instrument marks.
+	# Метки медленно вращаются — радиус читается как «прибор», а не статика.
+	var spin := t * 0.35
 	for i in 48:
-		var begin := float(i) / 48.0 * TAU
+		var begin := float(i) / 48.0 * TAU + spin
 		draw_arc(Vector2.ZERO, attraction_radius, begin, begin + TAU / 96.0, 4, Color(0.32, 0.93, 0.85, 0.38), 1.0, true)
 	draw_arc(Vector2.ZERO, attraction_radius - 4.0, -0.4 + pulse * 0.1, 0.4 + pulse * 0.1, 24, Color(0.55, 1.0, 0.94, 0.5), 1.3, true)
+	# Вспышка сбора: расширяющееся кольцо от корпуса.
+	if _flash > 0.0:
+		var ring_radius := attraction_radius * (1.0 - _flash) + 26.0
+		draw_arc(Vector2.ZERO, ring_radius, 0.0, TAU, 64, Color(0.6, 1.0, 0.95, _flash * 0.55), 2.0 + _flash * 2.0, true)
+	var art_scale := 1.0 + 0.10 * _flash
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2(art_scale, art_scale))
 	draw_texture_rect(MAGNET_ART, Rect2(-32, -32, 64, 64), false)
-	draw_circle(Vector2.ZERO, 4.0, Color(0.75, 1.0, 0.98, 0.15 + pulse * 0.12))
+	if _flash > 0.0:
+		draw_texture_rect(MAGNET_ART, Rect2(-32, -32, 64, 64), false, Color(0.7, 1.0, 0.96, _flash * 0.5))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	draw_circle(Vector2.ZERO, 4.0, Color(0.75, 1.0, 0.98, 0.15 + pulse * 0.12 + _flash * 0.3))

@@ -7,6 +7,7 @@ const GOLD := Color("efbd74")
 var game: MainGame
 var sparks: Array[Dictionary] = []
 var popups: Array[Dictionary] = []
+var rings: Array[Dictionary] = []
 var _rng := RandomNumberGenerator.new()
 var charge_bar: ProgressBar
 var cargo_bar: ProgressBar
@@ -152,9 +153,20 @@ func _configure() -> void:
 func _process(delta: float) -> void:
 	if not _configured or not is_instance_valid(game):
 		return
-	charge_bar.value = 100.0 * game.charge / game.max_charge()
-	cargo_bar.value = 100.0 * game.cargo_mass / game.capacity()
-	goal_bar.value = 100.0 * game.magnet.strength / CMConfig.ship_strength()
+	# Бары догоняют значения плавно, а не прыгают.
+	var lerp_speed := minf(1.0, delta * 9.0)
+	charge_bar.value = lerpf(charge_bar.value, 100.0 * game.charge / game.max_charge(), lerp_speed)
+	cargo_bar.value = lerpf(cargo_bar.value, 100.0 * game.cargo_mass / game.capacity(), lerp_speed)
+	goal_bar.value = lerpf(goal_bar.value, 100.0 * game.magnet.strength / CMConfig.ship_strength(), lerp_speed)
+	# Низкий заряд в вылете — шкала и цифры пульсируют тёплым.
+	var low_charge := game.state == MainGame.GameState.SALVAGE and game.charge < 10.0 and not game.is_paused and not game.menu_visible
+	if low_charge:
+		var wave := 0.55 + 0.45 * sin(Time.get_ticks_msec() / 150.0)
+		game.charge_label.modulate = Color(1.0, wave, wave * 0.8)
+		charge_bar.modulate = Color(1.0, wave, wave * 0.8)
+	else:
+		game.charge_label.modulate = Color.WHITE
+		charge_bar.modulate = Color.WHITE
 	# Follow actual label layout rather than assuming a text width.
 	charge_bar.position.x = game.charge_label.global_position.x
 	charge_bar.size.x = game.charge_label.size.x
@@ -169,12 +181,19 @@ func _process(delta: float) -> void:
 	for popup in popups:
 		popup["life"] -= delta
 		popup["pos"].y -= delta * 22
+	for ring in rings:
+		ring["life"] -= delta
 	sparks = sparks.filter(func(s: Dictionary) -> bool: return s["life"] > 0)
 	popups = popups.filter(func(s: Dictionary) -> bool: return s["life"] > 0)
+	rings = rings.filter(func(s: Dictionary) -> bool: return s["life"] > 0)
 	queue_redraw()
 
 func collected(pos: Vector2, value: int, unique: bool) -> void:
 	var tint := GOLD if unique else CYAN
+	if game.magnet != null:
+		game.magnet.flash()
+	if rings.size() < 16:
+		rings.append({"pos": pos, "life": 0.38})
 	for i in 7:
 		if sparks.size() >= 120:
 			break
@@ -185,6 +204,10 @@ func collected(pos: Vector2, value: int, unique: bool) -> void:
 	queue_redraw()
 
 func _draw() -> void:
+	for ring in rings:
+		var k: float = 1.0 - float(ring["life"]) / 0.38
+		var tint_r := Color(0.6, 1.0, 0.95, (1.0 - k) * 0.7)
+		draw_arc(ring["pos"], 6.0 + k * 30.0, 0.0, TAU, 40, tint_r, 1.6, true)
 	for spark in sparks:
 		var tint: Color = spark["color"]
 		tint.a = clampf(spark["life"] / 0.55, 0, 1)

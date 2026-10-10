@@ -93,9 +93,11 @@ func _ready() -> void:
 
 func _draw() -> void:
 	draw_texture_rect(SPACE_ART, CMConfig.FIELD_RECT, false)
+	var now := Time.get_ticks_msec() / 1000.0
 	for i in _stars.size():
 		var star := _stars[i]
-		var brightness := 0.15 + float(i % 9) * 0.055
+		var twinkle := 0.75 + 0.25 * sin(now * (0.9 + float(i % 5) * 0.35) + float(i) * 1.3)
+		var brightness := (0.15 + float(i % 9) * 0.055) * twinkle
 		var radius := 0.65 if i % 7 != 0 else 1.25
 		draw_circle(star, radius, Color(0.65, 0.83, 0.95, brightness))
 		if i % 37 == 0:

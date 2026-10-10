@@ -19,6 +19,9 @@ var collected := false
 var is_unique := false
 
 var _hint := ""
+## Чисто визуальные поля: фаза бобинга и сила притяжения (0..1) для анимации.
+var _phase := 0.0
+var _pull := 0.0
 
 func setup(type_def: Dictionary) -> void:
 	item_id = StringName(type_def.get("id", &"nut"))
@@ -28,6 +31,7 @@ func setup(type_def: Dictionary) -> void:
 	visual_radius = float(type_def.get("radius", 7.0))
 	color = type_def.get("color", Color.WHITE)
 	rotation = randf() * TAU
+	_phase = randf() * TAU
 
 
 func _physics_process(delta: float) -> void:
@@ -38,6 +42,7 @@ func step(delta: float) -> void:
 	if collected or game == null:
 		return
 	rotation += 0.4 * delta
+	_pull = maxf(_pull - delta * 2.0, 0.0)
 	# Поле заморожено вне вылета (DOCK/меню): ничто не ползёт к скрытому магниту.
 	if game.state != MainGame.GameState.SALVAGE:
 		queue_redraw()
@@ -80,6 +85,9 @@ func step(delta: float) -> void:
 		CMConfig.f("magnet.item_speed_min"),
 	)
 	speed = clampf(speed, CMConfig.f("magnet.item_speed_min"), CMConfig.f("magnet.item_speed_max"))
+	# Визуальный отклик: предмет «оживает» на притяжении — крутится быстрее.
+	_pull = clampf(_pull + delta * 3.0, 0.0, 1.0)
+	rotation += delta * 1.8 * _pull
 	# Кламп остатком дистанции: предмет не пролетает сквозь магнит ни при каком delta.
 	var move := minf(speed * delta, dist - CMConfig.f("magnet.capture_radius") * 0.5)
 	move = maxf(move, 0.0)
@@ -111,14 +119,23 @@ const ART := {
 }
 
 func _draw() -> void:
-	var size := visual_radius * 3.8
+	var t := Time.get_ticks_msec() / 1000.0
+	var size := visual_radius * 3.8 * (1.0 + 0.10 * _pull)
 	var texture: Texture2D = ART.get(item_id, ART[&"nut"])
+	# Мягкий бобинг поверх геймплейной позиции (только отрисовка).
+	draw_set_transform(Vector2(0.0, sin(t * 1.7 + _phase) * 2.5), rotation, Vector2.ONE)
 	if is_unique:
-		var pulse := 1.0 + 0.12 * sin(Time.get_ticks_msec() / 450.0)
+		var pulse := 1.0 + 0.12 * sin(t * 2.2)
 		for i in range(4, 0, -1):
 			draw_circle(Vector2.ZERO, size * (0.65 + i * 0.13) * pulse, Color(1.0, 0.7, 0.25, 0.018))
 		draw_arc(Vector2.ZERO, size * 0.85 * pulse, 0.0, TAU, 48, Color(1.0, 0.78, 0.36, 0.55), 1.0, true)
+		# Три искры на орбите — находку видно даже краем глаза.
+		for i in 3:
+			var angle := t * 1.9 + float(i) * TAU / 3.0 + _phase
+			var orbit := size * (1.05 + 0.08 * sin(t * 2.6 + float(i)))
+			draw_circle(Vector2.from_angle(angle) * orbit, 1.8, Color(1.0, 0.85, 0.45, 0.85))
 	draw_texture_rect(texture, Rect2(Vector2.ONE * -size * 0.5, Vector2.ONE * size), false)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	if _hint != "":
 		# Cancel object rotation so the requirement is always readable.
 		draw_set_transform(Vector2.ZERO, -rotation)
