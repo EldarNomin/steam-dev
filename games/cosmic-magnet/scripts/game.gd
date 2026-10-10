@@ -10,7 +10,8 @@ extends Node2D
 
 enum GameState { DOCK, SALVAGE }
 
-const FIELD_BG := Color("101a3c")
+const FIELD_BG := Color("071422")
+const SPACE_ART := preload("res://assets/art/space.svg")
 const STAR_COLOR := Color(1.0, 1.0, 1.0, 0.16)
 const DEFAULT_VOLUME := 0.8
 
@@ -62,7 +63,7 @@ func _ready() -> void:
 	randomize()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 20261008
-	for i in 90:
+	for i in 330:
 		var r := CMConfig.FIELD_RECT.grow(-6.0)
 		_stars.append(
 			Vector2(rng.randf_range(r.position.x, r.end.x), rng.randf_range(r.position.y, r.end.y))
@@ -91,9 +92,28 @@ func _ready() -> void:
 
 
 func _draw() -> void:
-	draw_rect(CMConfig.FIELD_RECT, FIELD_BG)
-	for s in _stars:
-		draw_rect(Rect2(s, Vector2(2.0, 2.0)), STAR_COLOR)
+	draw_texture_rect(SPACE_ART, CMConfig.FIELD_RECT, false)
+	for i in _stars.size():
+		var star := _stars[i]
+		var brightness := 0.15 + float(i % 9) * 0.055
+		var radius := 0.65 if i % 7 != 0 else 1.25
+		draw_circle(star, radius, Color(0.65, 0.83, 0.95, brightness))
+		if i % 37 == 0:
+			draw_line(star - Vector2(3, 0), star + Vector2(3, 0), Color(0.6, 0.9, 1.0, 0.35), 1.0, true)
+			draw_line(star - Vector2(0, 3), star + Vector2(0, 3), Color(0.6, 0.9, 1.0, 0.35), 1.0, true)
+	if state == GameState.SALVAGE and spawner != null:
+		for item in spawner.get_children():
+			if item is SalvageItem and not item.collected and item.required_strength <= magnet.strength and (item.is_unique or can_take(item.mass)):
+				var distance: float = item.position.distance_to(magnet.position)
+				if distance < magnet.attraction_radius:
+					var alpha := (1.0 - distance / magnet.attraction_radius) * 0.4
+					draw_line(item.position, magnet.position, Color(0.22, 0.92, 0.85, alpha * 0.18), 5.0, true)
+					draw_line(item.position, magnet.position, Color(0.45, 1.0, 0.93, alpha), 1.0, true)
+					var t := fmod(Time.get_ticks_msec() / 650.0, 1.0)
+					draw_circle(item.position.lerp(magnet.position, t), 1.8, Color(0.7, 1.0, 0.97, alpha))
+
+func _process(_delta: float) -> void:
+	queue_redraw()
 
 
 func _physics_process(delta: float) -> void:
@@ -180,6 +200,8 @@ func register_collection(item: SalvageItem) -> void:
 	if cargo_mass + item.mass > capacity():
 		return
 	item.collected = true
+	if has_node("Presentation"):
+		$Presentation.collected(item.position, item.price, item.is_unique)
 	collected_count += 1
 	if tutorial_stage < 2:
 		tutorial_stage = 2
@@ -245,7 +267,8 @@ func _update_shop() -> void:
 		var lvl := economy.level(id)
 		var at_max := lvl >= economy.max_level(id)
 		var cost := economy.upgrade_cost(id)
-		btn.text = "%s L%d — %d scrap" % [_title(id), lvl, cost] if not at_max else "%s L%d — MAX" % [_title(id), lvl]
+		var visual_titles := {&"strength": "MAGNET STRENGTH", &"radius": "ATTRACTION RADIUS", &"capacity": "CARGO CAPACITY"}
+		btn.text = "%s  %d\n%d SCRAP  ·  UPGRADE" % [visual_titles[id], lvl, cost] if not at_max else "%s  %d\nMAX LEVEL" % [visual_titles[id], lvl]
 		btn.disabled = not in_dock or at_max or economy.scrap < cost
 	launch_button.visible = in_dock
 	return_button.visible = not in_dock
