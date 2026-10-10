@@ -25,6 +25,7 @@ func _run_all() -> void:
 	_test_strict_validation()
 	_test_backup_never_overwritten_by_corrupt_main()
 	_test_write_failure_keeps_files_intact()
+	_test_backup_update_atomic()
 	_test_quarantine_and_confirmed_new_game()
 	_test_midflight_close_no_cargo_credit()
 	_test_relic_payout_survives_midflight_exit()
@@ -170,13 +171,44 @@ func _test_write_failure_keeps_files_intact() -> void:
 	DirAccess.remove_absolute(SaveService._tmp_path())
 	_check(SaveService._parse_valid(SaveService._read_raw(SaveService._main_path())).get("scrap", -1) == 56,
 		"write failure: main untouched", "")
+	# Бакап обновился до последнего валидного состояния ДО сбоя main (F5).
+	_check(SaveService._parse_valid(SaveService._read_raw(SaveService._bak_path())).get("scrap", -1) == 56,
+		"write failure: bak holds last valid state", "")
 	# main занят каталогом → rename невозможен, всё цело.
 	DirAccess.remove_absolute(SaveService._main_path())
 	DirAccess.make_dir_recursive_absolute(SaveService._main_path())
 	_check(not SaveService.save_data(payload), "write failure: main-as-directory returns false", "")
 	DirAccess.remove_absolute(SaveService._main_path())
+	_check(SaveService._parse_valid(SaveService._read_raw(SaveService._bak_path())).get("scrap", -1) == 56,
+		"write failure: bak still intact", "")
+
+
+## F5: обновление .bak атомарно — сбой записи бакапа не уничтожает последнюю
+## валидную копию и не роняет саму запись сохранения.
+func _test_backup_update_atomic() -> void:
+	SaveService.wipe_files()
+	SaveService.save_data({"scrap": 55, "levels": {"strength": 0, "radius": 0, "capacity": 0}, "unique_collected": false,
+		"tutorial_stage": 1, "settings": {"master_volume": 0.8}})
+	SaveService.save_data({"scrap": 56, "levels": {"strength": 0, "radius": 0, "capacity": 0}, "unique_collected": false,
+		"tutorial_stage": 1, "settings": {"master_volume": 0.8}})
+	# bak = 55, main = 56. Занимаем временный путь бакапа каталогом:
+	# обновление .bak не сможет начаться.
+	DirAccess.make_dir_recursive_absolute(SaveService._bak_path() + ".tmp")
+	var ok := SaveService.save_data({"scrap": 777, "levels": {"strength": 0, "radius": 0, "capacity": 0}, "unique_collected": false,
+		"tutorial_stage": 1, "settings": {"master_volume": 0.8}})
+	_check(ok, "atomic backup: save succeeds despite backup refresh failure", "")
+	_check(SaveService._parse_valid(SaveService._read_raw(SaveService._main_path())).get("scrap", -1) == 777,
+		"atomic backup: main holds fresh data", "")
 	_check(SaveService._parse_valid(SaveService._read_raw(SaveService._bak_path())).get("scrap", -1) == 55,
-		"write failure: bak untouched", "")
+		"atomic backup: previous .bak preserved on refresh failure", "")
+	_check(DirAccess.dir_exists_absolute(SaveService._bak_path() + ".tmp"),
+		"atomic backup: occupied tmp untouched (no partial file)", "")
+	DirAccess.remove_absolute(SaveService._bak_path() + ".tmp")
+	# После уборки следующая запись обновляет бакап штатно.
+	SaveService.save_data({"scrap": 888, "levels": {"strength": 0, "radius": 0, "capacity": 0}, "unique_collected": false,
+		"tutorial_stage": 1, "settings": {"master_volume": 0.8}})
+	_check(SaveService._parse_valid(SaveService._read_raw(SaveService._bak_path())).get("scrap", -1) == 777,
+		"atomic backup: .bak refreshed on next successful save", "")
 
 
 ## F4: повреждённые main+bak уходят в *.corrupt карантин; перезапись — только

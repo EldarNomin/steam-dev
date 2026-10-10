@@ -45,37 +45,40 @@ static func _read_raw(path: String) -> String:
 	return f.get_as_text()
 
 
-## Атомарная запись (CM-R12): tmp → бакап валидного main → rename.
-## Сбой на любом шаге возвращает false и не портит существующие файлы.
+## Атомарная запись (CM-R12): контент пишется во временный файл и заменяет
+## цель rename'ом; сбой на любом шаге возвращает false и не портит цель.
+static func _atomic_write(path: String, content: String) -> bool:
+	var tmp := path + ".tmp"
+	var f := FileAccess.open(tmp, FileAccess.WRITE)
+	if f == null:
+		return false  # путь занят каталогом/недоступен
+	f.store_string(content)
+	f.flush()
+	f.close()
+	if DirAccess.rename_absolute(tmp, path) != OK:
+		DirAccess.remove_absolute(tmp)
+		return false
+	return true
+
+
+## Запись сохранения (CM-R12): tmp → бакап валидного main (тоже атомарно,
+## F5) → rename. Сбой на любом шаге возвращает false и не портит
+## существующие файлы: при аварии последняя валидная копия выживает.
 static func save_data(data: Dictionary) -> bool:
 	var payload := data.duplicate(true)
 	payload["version"] = SAVE_VERSION
 	if DirAccess.make_dir_recursive_absolute(save_dir) != OK:
 		if not DirAccess.dir_exists_absolute(save_dir):
 			return false
-	var f := FileAccess.open(_tmp_path(), FileAccess.WRITE)
-	if f == null:
-		return false  # тест: tmp занят каталогом — запись невозможна
-	f.store_string(JSON.stringify(payload, "\t"))
-	f.flush()
-	f.close()
 	# Бакапим только валидный main (F1): битый main не затирает хороший .bak.
-	# Бакап пишем явной записью строки — copy_absolute на Windows ненадёжен
-	# для файлов, созданных rename.
+	# Обновление .bak атомарно (F5): crash посреди прямой записи уничтожил бы
+	# последнюю валидную копию; при сбое атомарной записи старый .bak цел.
 	var main_raw := _read_raw(_main_path())
 	if main_raw != "" and not _parse_valid(main_raw).is_empty():
-		var bak := FileAccess.open(_bak_path(), FileAccess.WRITE)
-		if bak == null:
-			# Бакап не обновился — старый .bak остаётся как есть; запись продолжаем.
+		if not _atomic_write(_bak_path(), main_raw):
 			push_warning("SaveService: failed to refresh backup, keeping previous .bak")
-		else:
-			bak.store_string(main_raw)
-			bak.close()
-	var err := DirAccess.rename_absolute(_tmp_path(), _main_path())
-	if err != OK:
-		# main не заменён (например, путь занят каталогом) — прибираем tmp.
-		DirAccess.remove_absolute(_tmp_path())
-		return false
+	if not _atomic_write(_main_path(), JSON.stringify(payload, "\t")):
+		return false  # main не заменён (например, путь занят каталогом)
 	return true
 
 
@@ -91,13 +94,8 @@ static func load_data() -> Dictionary:
 	var bak_raw := _read_raw(_bak_path())
 	var bak_d := _parse_valid(bak_raw)
 	if not bak_d.is_empty():
-		# Восстановление main из бакапа явной записью (copy_absolute
-		# на Windows ненадёжен).
-		var main_f := FileAccess.open(_main_path(), FileAccess.WRITE)
-		if main_f != null:
-			main_f.store_string(bak_raw)
-			main_f.close()
-		else:
+		# Восстановление main из бакапа атомарной записью.
+		if not _atomic_write(_main_path(), bak_raw):
 			push_warning("SaveService: recovery from backup succeeded, main file not replaced")
 		return bak_d
 	# Оба отсутствуют или повреждены: повреждённые — в карантин (диагностика).
@@ -180,6 +178,7 @@ static func _is_integral(v: Variant) -> bool:
 ## Полная очистка профиля (тесты), включая диагностические копии.
 static func wipe_files() -> void:
 	var names: Array[String] = ["save_v1.json", "save_v1.json.bak", "save_v1.json.tmp",
+		"save_v1.json.tmp.tmp", "save_v1.json.bak.tmp",
 		"save_v1.json.corrupt", "save_v1.json.bak.corrupt"]
 	for n in names:
 		var p := save_dir + "/" + n
