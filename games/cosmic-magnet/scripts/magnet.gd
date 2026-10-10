@@ -29,7 +29,19 @@ func flash() -> void:
 	queue_redraw()
 
 
+## Сброс визуального хвоста: при вылете/новой игре магнит «телепортируется»,
+## и старый след не должен тянуться за ним (F3 ревью visual-polish).
+func reset_trail() -> void:
+	_trail.clear()
+	queue_redraw()
+
+
 func _physics_process(delta: float) -> void:
+	# Затухание вспышки НЕ привязано к SALVAGE (F3): иначе DOCK замораживает
+	# вспышку прошлого сбора и следующий вылет начинается с чужой подсветкой.
+	if _flash > 0.0:
+		_flash = maxf(_flash - delta * 2.2, 0.0)
+		queue_redraw()
 	if game == null or game.state != MainGame.GameState.SALVAGE:
 		return
 	_target = clamp_to_field(get_global_mouse_position())
@@ -37,8 +49,6 @@ func _physics_process(delta: float) -> void:
 	_trail.push_front(position)
 	if _trail.size() > 9:
 		_trail.resize(9)
-	if _flash > 0.0:
-		_flash = maxf(_flash - delta * 2.2, 0.0)
 	queue_redraw()
 
 
@@ -64,10 +74,12 @@ const MAGNET_ART := preload("res://assets/art/magnet.webp")
 func _draw() -> void:
 	var t := Time.get_ticks_msec() / 1000.0
 	var pulse := 0.5 + 0.5 * sin(t * 2.0)
-	# Хвост: тающие круги по последним позициям (под корпусом).
+	# Хвост: точки хранятся в parent-space — переводим в локальные координаты
+	# магнита перед рисованием (F1: иначе координаты удваиваются).
 	for i in _trail.size():
+		var p := to_local(_trail[i])
 		var fade := (1.0 - float(i) / float(_trail.size())) * 0.10
-		draw_circle(_trail[i], 10.0 + i * 1.2, Color(0.45, 1.0, 0.94, fade))
+		draw_circle(p, 10.0 + i * 1.2, Color(0.45, 1.0, 0.94, fade))
 	for i in range(5, 0, -1):
 		draw_circle(Vector2.ZERO, 22.0 + i * 8.0, Color(0.15, 0.95, 0.85, 0.014 + _flash * 0.02))
 	# Exact gameplay radius, broken into restrained instrument marks.

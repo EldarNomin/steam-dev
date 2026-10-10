@@ -156,6 +156,7 @@ func launch() -> void:
 	state = GameState.SALVAGE
 	magnet.visible = true
 	magnet.position = CMConfig.FIELD_RECT.get_center()
+	magnet.reset_trail()  # новый вылет: прошлый след не тянется к центру поля (F3)
 	if tutorial_stage < 1:
 		tutorial_stage = 1
 	notify_hud()
@@ -390,6 +391,7 @@ func _start_run() -> void:
 	charge = max_charge()
 	magnet.visible = false
 	_apply_stats()
+	magnet.reset_trail()  # новый забег — без унаследованного следа/вспышки (F3)
 	# Поле пересобирается под параметры забега: реликвия есть только если
 	# она ещё не собрана (CM-R08).
 	spawner.reset_field()

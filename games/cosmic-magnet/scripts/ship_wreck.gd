@@ -13,6 +13,12 @@ const WINDOW := Color("e8a33d")
 var _points: PackedVector2Array = []
 
 
+## Дрейф и мигание огней — анимация в _draw требует собственной
+## перерисовки: перерисовка родителя команды детей не обновляет (F2).
+func _process(_delta: float) -> void:
+	queue_redraw()
+
+
 func _ready() -> void:
 	game = get_parent() as MainGame
 	_points = PackedVector2Array([
