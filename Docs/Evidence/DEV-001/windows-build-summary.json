@@ -1,0 +1,41 @@
+{
+  "task": "DEV-001",
+  "generatedAtLocal": "2026-10-07T02:45+03:00",
+  "verifiedBaseCommit": "a898271",
+  "branch": "feature/DEV-001-unity-baseline",
+  "buildOnState": "follow-up worktree: activeInputHandler=1 (Input System), rebuilt before this commit",
+  "editor": {
+    "version": "6000.3.25f1",
+    "revision": "e1dba0a9aba4"
+  },
+  "build": {
+    "target": "StandaloneWindows64",
+    "result": "Succeeded",
+    "errors": 0,
+    "warnings": 0,
+    "bytes": 96589899,
+    "seconds": 31.93,
+    "output": "Builds/Windows/CosmicCatch.exe (not committed)"
+  },
+  "runtimeCheck": {
+    "started": true,
+    "window": "1280x720 client",
+    "quitButtonClicked": true,
+    "exitCode": 0,
+    "playerLogExceptions": 0,
+    "screenshot": "Docs/Evidence/DEV-001/build-standalone.png"
+  },
+  "editorPlayMode": {
+    "status": "PASS",
+    "scene": "Assets/_Game/Scenes/Boot.unity",
+    "consoleGameErrors": 0,
+    "note": "single startup exception from UnityEditor.Search.SearchDatabase indexer (editor-internal, unrelated to project)",
+    "screenshot": "Docs/Evidence/DEV-001/boot-playmode-editor.png"
+  },
+  "activeInputHandler": 1,
+  "fullLogsLocal": [
+    "Reports/unity-setup.log",
+    "Reports/unity-build.log",
+    "Reports/playmode-capture.log"
+  ]
+}

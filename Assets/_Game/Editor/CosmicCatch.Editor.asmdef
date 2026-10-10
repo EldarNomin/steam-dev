@@ -1,0 +1,11 @@
+{
+  "name": "CosmicCatch.Editor",
+  "rootNamespace": "CosmicCatch.Editor",
+  "references": [
+    "CosmicCatch.Runtime",
+    "Unity.RenderPipelines.Core.Runtime",
+    "Unity.RenderPipelines.Universal.Runtime"
+  ],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": true
+}
