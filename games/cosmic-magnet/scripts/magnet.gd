@@ -70,10 +70,10 @@ static func clamp_to_field(pos: Vector2) -> Vector2:
 	)
 
 
-const MAGNET_ART := preload("res://assets/art/magnet.webp")
+const MAGNET_ART := preload("res://assets/void/magnet.svg")
 
 func _draw() -> void:
-	var t := Time.get_ticks_msec() / 1000.0
+	var t := game.visual_time
 	var pulse := 0.5 + 0.5 * sin(t * 2.0)
 	# Хвост: точки хранятся в parent-space — переводим в локальные координаты
 	# магнита перед рисованием (F1: иначе координаты удваиваются).
@@ -86,9 +86,9 @@ func _draw() -> void:
 	# Exact gameplay radius, broken into restrained instrument marks.
 	# Метки медленно вращаются — радиус читается как «прибор», а не статика.
 	var spin := t * 0.35
-	for i in 48:
-		var begin := float(i) / 48.0 * TAU + spin
-		draw_arc(Vector2.ZERO, attraction_radius, begin, begin + TAU / 96.0, 4, Color(0.32, 0.93, 0.85, 0.38), 1.0, true)
+	for i in 24:
+		var begin := float(i) / 24.0 * TAU + spin
+		draw_arc(Vector2.ZERO, attraction_radius, begin, begin + TAU / 96.0, 4, Color(0.32, 0.93, 0.85, 0.20), 1.0, true)
 	draw_arc(Vector2.ZERO, attraction_radius - 4.0, -0.4 + pulse * 0.1, 0.4 + pulse * 0.1, 24, Color(0.55, 1.0, 0.94, 0.5), 1.3, true)
 	# Вспышка сбора: расширяющееся кольцо от корпуса.
 	if _flash > 0.0:

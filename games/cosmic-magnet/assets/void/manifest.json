@@ -1,0 +1,52 @@
+[
+  {
+    "file": "skiff.png",
+    "original": "main/Foozle_2DS0011_Void_MainShip/Main Ship/Main Ship - Bases/PNGs/Main Ship - Base - Slight damage.png",
+    "sha256": "ce3f724a5a1e2c4021afa430271330db016235fd3e72036dd1ad23f7a72669a9"
+  },
+  {
+    "file": "engine.png",
+    "original": "main/Foozle_2DS0011_Void_MainShip/Main Ship/Main Ship - Engines/PNGs/Main Ship - Engines - Base Engine.png",
+    "sha256": "8a7c214047c980c13255830278d2bee9e70c69b097ff5bea57fb20cfb74694f7"
+  },
+  {
+    "file": "engine-power.png",
+    "original": "main/Foozle_2DS0011_Void_MainShip/Main Ship/Main Ship - Engine Effects/PNGs/Main Ship - Engines - Base Engine - Powering.png",
+    "sha256": "49c769b02229b47e1a7eb1d9b857753caea27ddc316d223a46dcf41486f48861"
+  },
+  {
+    "file": "derelict.png",
+    "original": "fleet/Foozle_2DS0013_Void_EnemyFleet_2/Nairan/Designs - Base/PNGs/Nairan - Dreadnought - Base.png",
+    "sha256": "b1ce40cbda5265ce4856f7e4a4f5fb4f038f3b19bda7c66d8b827bcad4bda4d0"
+  },
+  {
+    "file": "battery.png",
+    "original": "pick/Foozle_2DS0016_Void_PickupsPack/Shield Generators/PNGs/Pickup Icon - Shield Generator - All around shield.png",
+    "sha256": "e10df1fdd2ec0e991c2f80d8a285bc2848987046557e60e97ee107df8bfcb1ea"
+  },
+  {
+    "file": "module.png",
+    "original": "pick/Foozle_2DS0016_Void_PickupsPack/Engines/PNGs/Pickup Icon - Engines - Supercharged Engine.png",
+    "sha256": "cb2256628a796d40d252e30eb39249e2394ca420a2070f9fbe7c2b934c6c44c8"
+  },
+  {
+    "file": "relay.png",
+    "original": "pick/Foozle_2DS0016_Void_PickupsPack/Shield Generators/PNGs/Pickup Icon - Shield Generator - Front Shield.png",
+    "sha256": "c33471d95a8031c00a59cffc781d24bc51f7abd80e58ced894643b74c62db30f"
+  },
+  {
+    "file": "background.png",
+    "original": "env/Foozle_2DS0015_Void_EnvironmentPack/Backgrounds/PNGs/Condesed/Starry background  - Layer 01 - Void.png",
+    "sha256": "e9a0b9d567dd9d7fcc01741782315b3ef543460c30b3cadbae61915e50c0c5d0"
+  },
+  {
+    "file": "stars.png",
+    "original": "env/Foozle_2DS0015_Void_EnvironmentPack/Backgrounds/PNGs/Condesed/Starry background  - Layer 02 - Stars.png",
+    "sha256": "3dbff5e2d8527f8090feb81d7836560a128e27410ce65c06a2dd039b57c7032b"
+  },
+  {
+    "file": "planet.png",
+    "original": "env/Foozle_2DS0015_Void_EnvironmentPack/Planets/PNGs/Earth-Like planet - Without back glow.png",
+    "sha256": "904a02ccc6580630aba24665dcb7ab3bf7a86c57384eedfee21fd1c31d6a7a5d"
+  }
+]

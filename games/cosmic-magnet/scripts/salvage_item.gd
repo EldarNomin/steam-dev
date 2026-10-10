@@ -133,31 +133,31 @@ func _collect() -> void:
 
 
 const ART := {
-	&"nut": preload("res://assets/art/nut.svg"),
-	&"plate": preload("res://assets/art/plate.svg"),
-	&"battery": preload("res://assets/art/battery.svg"),
-	&"relic_core": preload("res://assets/art/relic.svg"),
+	&"nut": preload("res://assets/void/nut.svg"),
+	&"plate": preload("res://assets/void/plate.svg"),
 }
 
 func _draw() -> void:
 	if discovery in [&"relay", &"clamp"]:
 		draw_set_transform(Vector2.ZERO,-rotation)
-		var tint := Color("62e7d4") if discovery == &"relay" else Color("ef955f")
-		draw_circle(Vector2.ZERO,17,Color("102631"))
-		draw_arc(Vector2.ZERO,17,0,TAU,32,tint,2,true)
-		draw_line(Vector2(-7,0),Vector2(7,0),tint,3,true)
 		if discovery == &"relay":
-			draw_line(Vector2(0,-7),Vector2(0,7),tint,3,true)
-		draw_string(ThemeDB.fallback_font,Vector2(-35,33),"RELAY" if discovery == &"relay" else "CLAMP",HORIZONTAL_ALIGNMENT_CENTER,70,11,tint)
+			VoidArt.draw_sheet(self,VoidArt.RELAY,Rect2(-24,-24,48,48),game.visual_time,Vector2(32,32))
+		else:
+			draw_rect(Rect2(-15,-11,30,22),Color("393646"))
+			draw_rect(Rect2(-15,-11,6,22),Color("dc9362"))
+			draw_rect(Rect2(9,-11,6,22),Color("dc9362"))
+			draw_rect(Rect2(-9,-4,18,8),Color("9a7869"))
+		if game.magnet.position.distance_to(position) < 100 and game.state == MainGame.GameState.SALVAGE:
+			draw_string(ThemeDB.fallback_font,Vector2(-35,33),"RELAY" if discovery == &"relay" else "CLAMP",HORIZONTAL_ALIGNMENT_CENTER,70,11,Color("b8d6de"))
 		return
-	var t := Time.get_ticks_msec() / 1000.0
+	var t := game.visual_time
 	var size := visual_radius * 3.8 * (1.0 + 0.10 * _pull)
-	var texture: Texture2D = preload("res://assets/art/skiff.svg") if item_id == &"skiff" else ART.get(item_id, ART[&"nut"])
+	var texture: Texture2D = VoidArt.SKIFF if item_id == &"skiff" else ART.get(item_id, ART[&"nut"])
 	# Мягкий бобинг поверх геймплейной позиции (только отрисовка).
 	draw_set_transform(Vector2(0.0, sin(t * 1.7 + _phase) * 2.5), rotation, Vector2.ONE)
 	if cover_id >= 0:
 		draw_arc(Vector2.ZERO, size * 0.65, -PI/4, PI*1.25, 32, Color(0.95,0.72,0.4,0.65), 1.2, true)
-	if is_unique:
+	if is_unique and item_id != &"skiff":
 		var pulse := 1.0 + 0.12 * sin(t * 2.2)
 		for i in range(4, 0, -1):
 			draw_circle(Vector2.ZERO, size * (0.65 + i * 0.13) * pulse, Color(1.0, 0.7, 0.25, 0.018))
@@ -167,8 +167,19 @@ func _draw() -> void:
 			var angle := t * 1.9 + float(i) * TAU / 3.0 + _phase
 			var orbit := size * (1.05 + 0.08 * sin(t * 2.6 + float(i)))
 			draw_circle(Vector2.from_angle(angle) * orbit, 1.8, Color(1.0, 0.85, 0.45, 0.85))
-	var art_size := Vector2(size*1.8, size*0.72) if item_id == &"skiff" else Vector2.ONE*size
-	draw_texture_rect(texture, Rect2(-art_size*0.5, art_size), false)
+	if item_id == &"skiff":
+		# Rotate only artwork: towing coordinates/save data do not change.
+		draw_set_transform(Vector2(0,sin(t*1.7+_phase)*2),-PI/2)
+		var rect := Rect2(-48,-48,96,96)
+		draw_texture_rect(VoidArt.SKIFF,rect,false)
+		draw_texture_rect(VoidArt.ENGINE,rect,false)
+		# Rescue engines wake only while the actual tow impulse is moving the ship.
+		if game.pulse.affects(self) and game.site.can_collect(self):
+			VoidArt.draw_sheet(self,VoidArt.POWER,rect,t,Vector2(48,48))
+	elif item_id == &"battery" or item_id == &"relic_core":
+		VoidArt.draw_sheet(self,VoidArt.MODULE if item_id == &"relic_core" else VoidArt.BATTERY,Rect2(-size/2,-size/2,size,size),t+_phase,Vector2(32,32))
+	else:
+		draw_texture_rect(texture,Rect2(-Vector2.ONE*size/2,Vector2.ONE*size),false)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	if _hint != "":
 		# Cancel object rotation so the requirement is always readable.
