@@ -126,7 +126,8 @@ jobs:
     needs: godot
     if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 20    env:
+    timeout-minutes: 20
+    env:
       GODOT_VERSION: "4.5.1"
       GODOT_SHA512: 5bccbed65a94b82c7c319fdb15719ee8113a6e503976cc54e16f1c61fe95f3d74e5e40b8449b5bb89ff7f424574c20af01a4f5ef08b389e4dc338b245185b0b9
     steps:
