@@ -17,15 +17,109 @@
 		"spawn_inset": 30
 	},
 	"items": [
-		{"id": "nut", "required_strength": 1, "mass": 1, "price": 1, "radius": 7.0, "color": "a7b4c4", "weight": 50},
-		{"id": "plate", "required_strength": 1, "mass": 2, "price": 3, "radius": 9.0, "color": "d99a2b", "weight": 30},
-		{"id": "battery", "required_strength": 2, "mass": 4, "price": 8, "radius": 8.0, "color": "7fd0e8", "weight": 20}
+		{
+			"id": "nut",
+			"required_strength": 1,
+			"mass": 1,
+			"price": 1,
+			"radius": 7.0,
+			"color": "a7b4c4",
+			"weight": 50
+		},
+		{
+			"id": "plate",
+			"required_strength": 1,
+			"mass": 2,
+			"price": 3,
+			"radius": 9.0,
+			"color": "d99a2b",
+			"weight": 30
+		},
+		{
+			"id": "battery",
+			"required_strength": 2,
+			"mass": 4,
+			"price": 8,
+			"radius": 8.0,
+			"color": "7fd0e8",
+			"weight": 20
+		}
 	],
-	"unique_item": {"id": "relic_core", "required_strength": 2, "mass": 5, "price": 25, "radius": 11.0, "color": "ffd166", "payout": "instant"},
-	"ship": {"required_strength": 12},
+	"unique_item": {
+		"id": "relic_core",
+		"required_strength": 2,
+		"mass": 5,
+		"price": 25,
+		"radius": 11.0,
+		"color": "ffd166",
+		"payout": "instant"
+	},
+	"ship": {
+		"required_strength": 12
+	},
 	"upgrades": [
-		{"id": "strength", "title": "Magnet strength", "base_cost": 20, "cost_multiplier": 1.6, "max_levels": 3, "effect": {"strength": 1}},
-		{"id": "radius", "title": "Attraction radius", "base_cost": 15, "cost_multiplier": 1.5, "max_levels": 3, "effect": {"attraction_radius": 20}},
-		{"id": "capacity", "title": "Cargo capacity", "base_cost": 15, "cost_multiplier": 1.5, "max_levels": 3, "effect": {"cargo_capacity": 10}}
-	]
+		{
+			"id": "strength",
+			"title": "Magnet strength",
+			"base_cost": 20,
+			"cost_multiplier": 1.6,
+			"max_levels": 3,
+			"effect": {
+				"strength": 1
+			}
+		},
+		{
+			"id": "radius",
+			"title": "Attraction radius",
+			"base_cost": 15,
+			"cost_multiplier": 1.5,
+			"max_levels": 3,
+			"effect": {
+				"attraction_radius": 20
+			}
+		},
+		{
+			"id": "capacity",
+			"title": "Cargo capacity",
+			"base_cost": 15,
+			"cost_multiplier": 1.5,
+			"max_levels": 3,
+			"effect": {
+				"cargo_capacity": 10
+			}
+		},
+		{
+			"id": "pulse",
+			"title": "Magnetic pulse",
+			"base_cost": 15,
+			"cost_multiplier": 1.0,
+			"max_levels": 1,
+			"effect": {
+				"pulse_unlocked": 1
+			}
+		}
+	],
+	"pulse": {
+		"hold_min": 0.25,
+		"hold_max": 0.8,
+		"duration": 0.8,
+		"cooldown": 4.0,
+		"max_targets": 12,
+		"speed_multiplier": 2.5,
+		"max_speed": 700.0,
+		"chain_radius": 75.0,
+		"chain_hops": 2,
+		"chain_targets": 8
+	},
+	"site": {
+		"center_x": 350,
+		"center_y": 420,
+		"radius": 145,
+		"cover_count": 12,
+		"skiff_x": 760,
+		"skiff_y": 475,
+		"skiff_strength": 2,
+		"skiff_mass": 20,
+		"skiff_reward": 100
+	}
 }

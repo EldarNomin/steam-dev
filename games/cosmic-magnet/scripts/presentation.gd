@@ -13,6 +13,10 @@ var charge_bar: ProgressBar
 var cargo_bar: ProgressBar
 var goal_bar: ProgressBar
 var _configured := false
+var pulse_hint: Label
+var objective_hint: Label
+var completion: ColorRect
+var completion_seen := false
 
 func _ready() -> void:
 	game = get_parent() as MainGame
@@ -117,9 +121,41 @@ func _configure() -> void:
 		button.add_theme_constant_override("icon_max_width", 42)
 		button.add_theme_constant_override("h_separation", 14)
 		button.add_theme_font_size_override("font_size", 16)
-	game.status_label.position = Vector2(20, 348)
-	game.status_label.size = Vector2(260, 72)
-	game.status_label.add_theme_font_size_override("font_size", 14)
+	game.pulse_button = Button.new()
+	game.pulse_button.name = "PulseButton"
+	side.add_child(game.pulse_button)
+	game.pulse_button.position = Vector2(16, 328)
+	game.pulse_button.size = Vector2(268, 62)
+	game.pulse_button.add_theme_stylebox_override("normal", normal)
+	game.pulse_button.add_theme_stylebox_override("hover", hover)
+	game.pulse_button.add_theme_stylebox_override("disabled", disabled)
+	game.pulse_button.add_theme_font_size_override("font_size", 15)
+	game.pulse_button.pressed.connect(game._on_buy.bind(&"pulse"))
+	pulse_hint = _label(ui, "", Vector2(24, 82), Vector2(500, 24), 14, CYAN)
+	objective_hint = _label(ui, "", Vector2(24, 108), Vector2(850, 24), 13, GOLD)
+	completion = ColorRect.new()
+	completion.color = Color(0.02, 0.04, 0.07, 0.85)
+	completion.size = Vector2(1280, 720)
+	completion.visible = false
+	ui.add_child(completion)
+	var end_panel := Panel.new()
+	end_panel.position = Vector2(340, 210)
+	end_panel.size = Vector2(600, 300)
+	end_panel.add_theme_stylebox_override("panel", _box(Color("0b202d"), GOLD, 12))
+	completion.add_child(end_panel)
+	_label(end_panel, "SKIFF RECOVERED", Vector2(32, 30), Vector2(535, 40), 30, GOLD)
+	_label(end_panel, "You uncovered a signal, built a chain magnet\nand brought a lost ship home.\n\n+100 scrap  /  Your progress is saved.", Vector2(32, 90), Vector2(535, 110), 18, Color("d7e2e5"))
+	var back := Button.new()
+	back.text = "BACK TO DOCK"
+	back.position = Vector2(32, 224)
+	back.size = Vector2(536, 46)
+	back.add_theme_stylebox_override("normal", normal)
+	back.add_theme_stylebox_override("hover", hover)
+	back.pressed.connect(func() -> void: completion.hide())
+	end_panel.add_child(back)
+	game.status_label.position = Vector2(20, 396)
+	game.status_label.size = Vector2(260, 38)
+	game.status_label.add_theme_font_size_override("font_size", 12)
 	_label(side, "THE FINAL SALVAGE", Vector2(20, 435), Vector2(260, 23), 12, GOLD)
 	var goal := TextureRect.new()
 	goal.texture = preload("res://assets/art/derelict.webp")
@@ -143,7 +179,7 @@ func _configure() -> void:
 	var menu_panel: Panel = game.main_menu.get_node("MenuPanel")
 	menu_panel.add_theme_stylebox_override("panel", _box(Color("0b202d"), Color("467385"), 12))
 	menu_panel.get_node("TitleLabel").add_theme_font_size_override("font_size", 29)
-	menu_panel.get_node("SubtitleLabel").text = "Salvage the forgotten.\nBuild your magnet. Reach the derelict."
+	menu_panel.get_node("SubtitleLabel").text = "Uncover a signal. Build a chain magnet.\nBring a lost ship home."
 	# Existing confirmation panel was shorter than its cancel button.
 	game.new_game_confirm.get_node("ConfirmPanel").size.y = 230
 	game.tutorial_label.add_theme_font_size_override("font_size", 15)
@@ -153,6 +189,26 @@ func _configure() -> void:
 func _process(delta: float) -> void:
 	if not _configured or not is_instance_valid(game):
 		return
+	objective_hint.visible = not game.menu_visible
+	objective_hint.text = game.site.objective()
+	if not game.site.skiff_recovered:
+		completion_seen = false
+		completion.hide()
+	elif not game.menu_visible and not completion_seen:
+		completion_seen = true
+		completion.show()
+	if game.menu_visible:
+		completion.hide()
+	pulse_hint.visible = not game.menu_visible
+	if game.pulse != null:
+		if not game.pulse.unlocked():
+			pulse_hint.text = "FIRST DISCOVERY  /  Install a magnetic pulse in the dock"
+		elif game.pulse.holding:
+			pulse_hint.text = "CHARGING PULSE  /  release LMB to pull the group"
+		elif game.pulse.cooldown > 0.0:
+			pulse_hint.text = "PULSE RECHARGING  /  %.1fs" % game.pulse.cooldown
+		else:
+			pulse_hint.text = "PULSE READY  /  Hold LMB → release"
 	# Бары догоняют значения плавно, а не прыгают.
 	var lerp_speed := minf(1.0, delta * 9.0)
 	charge_bar.value = lerpf(charge_bar.value, 100.0 * game.charge / game.max_charge(), lerp_speed)
@@ -188,7 +244,7 @@ func _process(delta: float) -> void:
 	rings = rings.filter(func(s: Dictionary) -> bool: return s["life"] > 0)
 	queue_redraw()
 
-func collected(pos: Vector2, value: int, unique: bool) -> void:
+func collected(pos: Vector2, value: int, unique: bool, text := "") -> void:
 	var tint := GOLD if unique else CYAN
 	if game.magnet != null:
 		game.magnet.flash()
@@ -200,7 +256,7 @@ func collected(pos: Vector2, value: int, unique: bool) -> void:
 		var angle := _rng.randf_range(0, TAU)
 		sparks.append({"pos": pos, "vel": Vector2.from_angle(angle) * _rng.randf_range(35, 110), "life": 0.55, "color": tint})
 	if popups.size() < 24:
-		popups.append({"pos": pos, "value": value, "life": 0.8, "color": tint})
+		popups.append({"pos": pos, "value": value, "text":text if text != "" else "+%d" % value, "life": 0.8, "color": tint})
 	queue_redraw()
 
 func _draw() -> void:
@@ -215,4 +271,4 @@ func _draw() -> void:
 	for popup in popups:
 		var tint: Color = popup["color"]
 		tint.a = clampf(popup["life"] / 0.5, 0, 1)
-		draw_string(ThemeDB.fallback_font, popup["pos"] + Vector2(-8, -20), "+%d" % popup["value"], HORIZONTAL_ALIGNMENT_LEFT, 55, 17, tint)
+		draw_string(ThemeDB.fallback_font, popup["pos"] + Vector2(-8, -20), popup.get("text", "+%d" % popup["value"]), HORIZONTAL_ALIGNMENT_LEFT, 180, 17, tint)

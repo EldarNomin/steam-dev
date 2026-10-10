@@ -126,6 +126,8 @@ func _random_spawn_position() -> Vector2:
 		pos = Vector2(
 			randf_range(r.position.x, r.end.x), randf_range(r.position.y, r.end.y)
 		)
+		if game.site != null and game.site.excludes(pos):
+			continue
 		if pos.distance_to(magnet.position) > magnet.attraction_radius:
 			return pos
 	return pos

@@ -139,11 +139,17 @@ static func is_valid_save(d: Variant) -> bool:
 	if not (levels is Dictionary):
 		return false
 	var upgrade_defs: Array = CMConfig.upgrades()
-	if levels.size() != upgrade_defs.size():
-		return false  # неизвестные или недостающие ключи уровней
+	var allowed_keys: Array[String] = []
+	for def: Dictionary in upgrade_defs:
+		allowed_keys.append(String(def["id"]))
+	for key in levels:
+		if not allowed_keys.has(String(key)):
+			return false
 	for def: Dictionary in upgrade_defs:
 		var key: String = String(def["id"])
 		if not levels.has(key):
+			if key == "pulse":
+				continue  # legacy v1 has only the three original upgrade keys
 			return false
 		if not _is_integral(levels[key]):
 			return false
@@ -157,6 +163,8 @@ static func is_valid_save(d: Variant) -> bool:
 		return false
 	if d.get("unique_collected") is not bool:
 		return false
+	if d.has("hook") and not valid_hook(d["hook"]):
+		return false
 	var settings: Variant = d.get("settings")
 	if not (settings is Dictionary):
 		return false
@@ -164,6 +172,24 @@ static func is_valid_save(d: Variant) -> bool:
 	if vol is not int and vol is not float:
 		return false
 	return float(vol) >= 0.0 and float(vol) <= 1.0
+
+
+static func valid_hook(d: Variant) -> bool:
+	if not d is Dictionary:
+		return false
+	if d.is_empty():
+		return true  # profile saved before site is initialized
+	var ids: Variant = d.get("cleared")
+	if not ids is Array or d.get("module_found") is not bool or d.get("skiff_recovered") is not bool:
+		return false
+	var seen := {}
+	for id in ids:
+		if not _is_integral(id) or int(id) < 0 or int(id) >= CMConfig.i("site.cover_count") or seen.has(int(id)):
+			return false
+		seen[int(id)] = true
+	if d["module_found"] and ids.size() != CMConfig.i("site.cover_count"):
+		return false
+	return not d["skiff_recovered"] or d["module_found"]
 
 
 ## JSON в Godot отдаёт все числа как float; «целое» = число без дробной части.

@@ -108,6 +108,14 @@ jobs:
             exit 1
           fi
 
+      - name: Tests (pulse and salvage discoveries)
+        working-directory: games/cosmic-magnet
+        run: |
+          set -o pipefail
+          "$HOME/godot/godot" --headless --path . --script tests/test_hook.gd 2>&1 | tee test-hook.log
+          if grep -E "SCRIPT ERROR|ERROR:" test-hook.log; then exit 1; fi
+          grep -q "SUMMARY passed=.* failed=0" test-hook.log
+
       - name: Upload logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
@@ -119,6 +127,7 @@ jobs:
             games/cosmic-magnet/test.log
             games/cosmic-magnet/test-economy.log
             games/cosmic-magnet/test-save.log
+            games/cosmic-magnet/test-hook.log
           if-no-files-found: ignore
 
   gameplay-video:
