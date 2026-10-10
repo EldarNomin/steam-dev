@@ -36,6 +36,7 @@ func _run_all() -> void:
 	_test_field_clamp()
 	_test_pause_stops_simulation(main)
 	_test_focus_loss_autopause(main)
+	_test_magnet_visual_state_reset(main)
 	await _test_soak_collect_respawn_600s(main)
 
 	SaveService.wipe_files()
@@ -261,6 +262,42 @@ func _test_soak_collect_respawn_600s(main: MainGame) -> void:
 		"count=%d" % main.spawner.field_count())
 	_check(manual_ok >= 2500, "soak 600s: at least 2500 manual collections registered",
 		"manual=%d" % manual_ok)
+
+
+## Визуальное состояние магнита между вылетами (F1–F3 ревью visual-polish):
+## вспышка тает и в DOCK, хвост сбрасывается при вылете, to_local не удваивает
+## координаты следа.
+func _test_magnet_visual_state_reset(main: MainGame) -> void:
+	main.request_return()  # гарантированный DOCK
+	main.launch()          # вылет №1: trail сброшен
+	main.magnet.position = Vector2(420, 300)
+	main.magnet._trail.push_front(Vector2(420, 300))
+	main.magnet.flash()
+	_check(main.magnet._flash > 0.0, "visual: flash set by collection hook", "")
+	_check(main.magnet._trail.size() == 1, "visual: trail records flight", "")
+	main.request_return()
+	_check(main.state == MainGame.GameState.DOCK, "visual: decay probe is in dock", "")
+	main.magnet._physics_process(2.0)  # 2 с в DOCK: вспышка обязана погаснуть
+	_check(main.magnet._flash == 0.0, "visual: flash decays in dock",
+		"flash=%f" % main.magnet._flash)
+	main.request_return()  # штатный возврат в док
+	main.magnet.flash()    # новый вылет сразу после сбора, без ожидания
+	main.launch()          # вылет №2 — чистый старт
+	_check(main.magnet._flash == 0.0, "visual: flash cleared on immediate sortie", "")
+	_check(main.magnet._trail.is_empty(), "visual: trail cleared on new sortie", "")
+	main.magnet.position = Vector2(420, 300)
+	main.magnet._trail.push_front(Vector2(420, 300))
+	_check(main.magnet.to_local(Vector2(420, 300)) == Vector2.ZERO,
+		"visual: trail converts to magnet-local (no doubled coords)",
+		str(main.magnet.to_local(Vector2(420, 300))))
+	main.magnet.reset_trail()
+	main.request_return()
+	main.magnet.flash()
+	main.new_game()
+	_check(main.magnet._flash == 0.0, "visual: new game clears flash", "")
+	main.magnet.flash()
+	main.continue_game()
+	_check(main.magnet._flash == 0.0, "visual: continue clears flash", "")
 
 
 func _test_field_clamp() -> void:

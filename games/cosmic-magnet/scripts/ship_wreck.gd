@@ -13,6 +13,12 @@ const WINDOW := Color("e8a33d")
 var _points: PackedVector2Array = []
 
 
+## Дрейф и мигание огней — анимация в _draw требует собственной
+## перерисовки: перерисовка родителя команды детей не обновляет (F2).
+func _process(_delta: float) -> void:
+	queue_redraw()
+
+
 func _ready() -> void:
 	game = get_parent() as MainGame
 	_points = PackedVector2Array([
@@ -25,8 +31,20 @@ func _ready() -> void:
 const SHIP_ART := preload("res://assets/art/derelict.webp")
 
 func _draw() -> void:
+	var t := Time.get_ticks_msec() / 1000.0
 	# Separate transparent sprite, not a background containing fake UI.
+	# Медленное покачивание — корабль дрейфует, а не прибит к фону.
+	draw_set_transform(Vector2(0.0, sin(t * 0.5) * 3.0), 0.0, Vector2.ONE)
 	draw_texture_rect(SHIP_ART, Rect2(-205, -82, 410, 164), false, Color.WHITE)
+	# Мигающие навигационные огни по корпусу и маячок на надстройке.
+	for i in 5:
+		var phase := float(i) * 1.7
+		var on := sin(t * 1.1 + phase) > 0.1
+		draw_circle(Vector2(-150 + i * 62.0, -4.0 + (2.0 if i % 2 == 0 else 0.0)),
+			2.2, Color(1.0, 0.72, 0.3, 0.55 if on else 0.12))
+	if sin(t * 2.4) > 0.0:
+		draw_circle(Vector2(-2.0, -66.0), 2.6, Color(1.0, 0.35, 0.3, 0.8))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	var panel := StyleBoxFlat.new()
 	panel.bg_color = Color(0.025, 0.055, 0.085, 0.9)
 	panel.border_color = Color(0.6, 0.4, 0.22, 0.75)
