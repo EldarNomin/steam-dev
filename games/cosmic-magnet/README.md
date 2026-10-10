@@ -54,4 +54,8 @@ godot --path games/cosmic-magnet
 
 Баланс (предметы, заряд, ёмкость, цены улучшений, реликвия, корабль) — единый источник `data/balance.json`; правила расчёта цен живут в `scripts/economy.gd` и нигде не дублируются.
 
-CI: `.github/workflows/cosmic-magnet.yml` — импорт, smoke, три набора тестов на `ubuntu-latest`, фильтр путей `games/cosmic-magnet/**` и сам workflow; провал по `SCRIPT ERROR|ERROR:` даже при нулевом коде выхода. Job `gameplay-video` пишет ~3,5 минуты геймплея с настоящими кликами (NEW GAME → LAUNCH/магазин) в артефакт `cosmic-magnet-gameplay-mp4`.
+CI: `.github/workflows/cosmic-magnet.yml` — импорт, smoke, три набора тестов на `ubuntu-latest`, фильтр путей `games/cosmic-magnet/**` и сам workflow; провал по `SCRIPT ERROR|ERROR:` даже при нулевом коде выхода. Job `gameplay-video` пишет ~3,5 минуты геймплея с настоящими кликами (NEW GAME → LAUNCH/магазин) в артефакт `cosmic-magnet-gameplay-mp4`. Job `windows-build` собирает Windows x64 билд (артефакт `cosmic-magnet-windows-x64`) со smoke-запуском без редактора.
+
+## Плейтест (CM-004)
+
+Билд для раздачи — CI-артефакт `cosmic-magnet-windows-x64` (Actions → последний run ветки). Процедура сессий, сводная таблица и критерий решения — `docs/playtest/README.md`; анкета участника — `docs/playtest/anketa.md`.

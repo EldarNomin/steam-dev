@@ -126,8 +126,7 @@ jobs:
     needs: godot
     if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    env:
+    timeout-minutes: 20    env:
       GODOT_VERSION: "4.5.1"
       GODOT_SHA512: 5bccbed65a94b82c7c319fdb15719ee8113a6e503976cc54e16f1c61fe95f3d74e5e40b8449b5bb89ff7f424574c20af01a4f5ef08b389e4dc338b245185b0b9
     steps:
@@ -179,4 +178,78 @@ jobs:
         with:
           name: cosmic-magnet-gameplay-mp4
           path: games/cosmic-magnet/cosmic-magnet-gameplay.mp4
+          if-no-files-found: error
+
+  windows-build:
+    name: Windows x64 playtest build
+    needs: godot
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    timeout-minutes: 15
+    env:
+      GODOT_VERSION: "4.5.1"
+      # Официальные суммы из SHA512-SUMS.txt релиза 4.5.1-stable.
+      GODOT_SHA512: ab84df90ead5a888530faaabe744a27678ef7635068883900174fae37f7fc6178d033b551d88963c7dc2466580915a582bbc79aca97c19085900655761f56a27
+      TEMPLATES_SHA512: 8a65c73541184fbcf1a7afedb37c9c15ed0f3babdaafe36ff47ccc515548ac84bc7563ba5b94c253e6085b121ac608b7e03d35dfc0b2c8c690a646a8755b57e5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Godot and export templates
+        uses: actions/cache@v4
+        with:
+          path: ~/godot-cache
+          key: godot-4.5.1-win64-and-templates
+
+      - name: Download and verify Godot with export templates
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "$HOME\godot-cache" | Out-Null
+          $godotZip = "$HOME\godot-cache\godot.zip"
+          $templates = "$HOME\godot-cache\templates.tpz"
+          if (-not (Test-Path "$HOME\godot-cache\godot.exe")) {
+            curl.exe -sL -o $godotZip "https://github.com/godotengine/godot/releases/download/$env:GODOT_VERSION-stable/Godot_v$($env:GODOT_VERSION)-stable_win64.exe.zip"
+            curl.exe -sL -o $templates "https://github.com/godotengine/godot/releases/download/$($env:GODOT_VERSION)-stable/Godot_v$($env:GODOT_VERSION)-stable_export_templates.tpz"
+            $h1 = (Get-FileHash -Algorithm SHA512 $godotZip).Hash
+            $h2 = (Get-FileHash -Algorithm SHA512 $templates).Hash
+            if ($h1 -ne $env:GODOT_SHA512) { throw "godot.zip SHA512 mismatch: $h1" }
+            if ($h2 -ne $env:TEMPLATES_SHA512) { throw "templates.tpz SHA512 mismatch: $h2" }
+            Expand-Archive -Force $godotZip "$HOME\godot-cache\tool"
+            Move-Item -Force "$HOME\godot-cache\tool\Godot_v$($env:GODOT_VERSION)-stable_win64_console.exe" "$HOME\godot-cache\godot.exe"
+            Expand-Archive -Force $templates "$HOME\godot-cache\tpz"
+            New-Item -ItemType Directory -Force -Path "$env:APPDATA\Godot\export_templates" | Out-Null
+            Move-Item -Force "$HOME\godot-cache\tpz\templates" "$env:APPDATA\Godot\export_templates\$($env:GODOT_VERSION).stable"
+          }
+          & "$HOME\godot-cache\godot.exe" --version
+
+      - name: Import project
+        working-directory: games/cosmic-magnet
+        shell: pwsh
+        run: |
+          & "$HOME\godot-cache\godot.exe" --headless --path . --editor --import 2>&1 | Tee-Object -FilePath import.log
+          if (Select-String -Path import.log -Pattern "SCRIPT ERROR" -Quiet) { throw "script errors during import" }
+
+      - name: Export release build
+        working-directory: games/cosmic-magnet
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path build | Out-Null
+          & "$HOME\godot-cache\godot.exe" --headless --path . --export-release "Windows Desktop" build/CosmicMagnet.exe 2>&1 | Tee-Object -FilePath export.log
+          if (Select-String -Path export.log -Pattern "SCRIPT ERROR|ERROR:" -Quiet) { throw "errors during export" }
+          Get-ChildItem build
+
+      - name: Smoke the exported build
+        shell: pwsh
+        run: |
+          # Билд обязан стартовать без редактора; 3 с достаточно, чтобы
+          # поймать падение загрузки (окно закроется по таймауту задачи).
+          $p = Start-Process -FilePath "games/cosmic-magnet/build/CosmicMagnet.exe" -PassThru
+          Start-Sleep -Seconds 3
+          if ($p.HasExited) { throw "exported build exited immediately" }
+          Stop-Process -Id $p.Id -Force
+
+      - name: Upload Windows build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cosmic-magnet-windows-x64
+          path: games/cosmic-magnet/build/CosmicMagnet.exe
           if-no-files-found: error
