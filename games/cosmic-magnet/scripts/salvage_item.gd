@@ -15,6 +15,8 @@ var price := 1
 var visual_radius := 7.0
 var color := Color.WHITE
 var collected := false
+## Уникальная находка (CM-R08): спавнится один раз за забег, не возрождается.
+var is_unique := false
 
 var _hint := ""
 
@@ -36,6 +38,10 @@ func step(delta: float) -> void:
 	if collected or game == null:
 		return
 	rotation += 0.4 * delta
+	# Поле заморожено вне вылета (DOCK/меню): ничто не ползёт к скрытому магниту.
+	if game.state != MainGame.GameState.SALVAGE:
+		queue_redraw()
+		return
 	var magnet_node := game.magnet
 	var magnet_pos := magnet_node.position
 	var to_magnet := magnet_pos - position
@@ -46,7 +52,8 @@ func step(delta: float) -> void:
 	# Невлезающий в трюм — остаётся на поле с подсказкой FULL (SPEC: груз не
 	# превышает ёмкость).
 	var can_lift := required_strength <= magnet_node.strength
-	var fits := game.can_take(mass)
+	# Уникальная находка не занимает груз — гейт ёмкости к ней не применяется.
+	var fits := game.can_take(mass) or is_unique
 	_hint = ""
 	if not can_lift and dist <= magnet_node.attraction_radius:
 		_hint = "S%d?" % required_strength
@@ -118,6 +125,11 @@ func _draw() -> void:
 	else:
 		draw_circle(Vector2.ZERO, visual_radius, color)
 		draw_circle(Vector2.ZERO, visual_radius * 0.42, Color("1c2438"))
+	if is_unique:
+		# Пульсирующие янтарные кольца — находку видно издалека.
+		var pulse := 1.4 + 0.35 * sin(Time.get_ticks_msec() / 240.0)
+		draw_arc(Vector2.ZERO, visual_radius * pulse, 0.0, TAU, 40, Color("ffd166"), 2.0)
+		draw_arc(Vector2.ZERO, visual_radius * pulse * 1.6, 0.0, TAU, 40, Color(1.0, 0.82, 0.4, 0.35), 1.5)
 	if _hint != "":
 		draw_string(
 			ThemeDB.fallback_font,

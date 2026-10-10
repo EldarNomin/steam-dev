@@ -21,6 +21,8 @@
 		{"id": "plate", "required_strength": 1, "mass": 2, "price": 3, "radius": 9.0, "color": "d99a2b", "weight": 30},
 		{"id": "battery", "required_strength": 2, "mass": 4, "price": 8, "radius": 8.0, "color": "7fd0e8", "weight": 20}
 	],
+	"unique_item": {"id": "relic_core", "required_strength": 2, "mass": 5, "price": 25, "radius": 11.0, "color": "ffd166", "payout": "instant"},
+	"ship": {"required_strength": 12},
 	"upgrades": [
 		{"id": "strength", "title": "Magnet strength", "base_cost": 20, "cost_multiplier": 1.6, "max_levels": 3, "effect": {"strength": 1}},
 		{"id": "radius", "title": "Attraction radius", "base_cost": 15, "cost_multiplier": 1.5, "max_levels": 3, "effect": {"attraction_radius": 20}},

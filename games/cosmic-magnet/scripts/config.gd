@@ -53,3 +53,13 @@ static func items() -> Array:
 
 static func upgrades() -> Array:
 	return node("upgrades")
+
+
+## Единственная уникальная находка CM-003 (не входит в пул возрождения).
+static func unique_item() -> Dictionary:
+	return node("unique_item")
+
+
+## Сила, нужная финальному кораблю (CM-R09; в CM-003 — только визуальная цель).
+static func ship_strength() -> int:
+	return i("ship.required_strength")

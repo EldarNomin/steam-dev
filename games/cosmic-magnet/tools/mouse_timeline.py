@@ -20,9 +20,12 @@ import time
 
 DURATION = float(sys.argv[1]) if len(sys.argv) > 1 else 200.0
 
-# Фиксированные центры кнопок правой панели (canvas coords).
-BTN_LAUNCH = (1130, 680)
-BTN_STRENGTH = (1130, 138)
+# Фиксированные центры кнопок (canvas coords; дети панелей — относительные
+# офсеты + позиция панели).
+BTN_LAUNCH = (1130, 680)      # SidePanel(980,60) + (16..284, 596..644)
+BTN_STRENGTH = (1130, 138)    # SidePanel + (16..284, 56..100)
+BTN_NEW_GAME = (640, 347)     # MenuPanel(470,110) + (30..310, 214..260)
+BTN_CONFIRM_YES = (640, 369)  # ConfirmPanel(460,250) + (32..328, 100..146)
 
 
 def field_point(t: float):
@@ -39,12 +42,20 @@ def click(x: float, y: float) -> None:
 
 def main() -> None:
     t0 = time.time()
+    started = False
     next_strength_click = 6.0
     next_launch_click = 2.0
     while True:
         t = time.time() - t0
         if t >= DURATION:
             break
+        if not started:
+            # Меню: NEW GAME; на машине с прежним сейвом появится подтверждение.
+            click(*BTN_NEW_GAME)
+            time.sleep(0.4)
+            click(*BTN_CONFIRM_YES)
+            started = True
+            continue
         if t >= next_launch_click:
             click(*BTN_LAUNCH)
             next_launch_click += 9.0

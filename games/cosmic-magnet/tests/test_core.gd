@@ -14,8 +14,15 @@ func _initialize() -> void:
 
 
 func _run_all() -> void:
+	# Отдельный временный профиль: игра пишет сейвы (покупка/разгрузка),
+	# тесты не должны трогать сохранение игрока.
+	SaveService.save_dir = "user://cm3_tests/core_%d" % (Time.get_ticks_msec() + randi() % 100000)
+	DirAccess.make_dir_recursive_absolute(SaveService.save_dir)
+	SaveService.wipe_files()
+
 	var main: MainGame = preload("res://scenes/main.tscn").instantiate()
 	root.add_child(main)
+	main.new_game()  # выходим из главного меню в забег
 
 	_test_initial_fill(main)
 	main.launch()  # правила сбора действуют в SALVAGE
@@ -30,6 +37,10 @@ func _run_all() -> void:
 	_test_pause_stops_simulation(main)
 	_test_focus_loss_autopause(main)
 	await _test_soak_collect_respawn_600s(main)
+
+	SaveService.wipe_files()
+	DirAccess.remove_absolute(SaveService.save_dir)
+	SaveService.save_dir = "user://cosmic_magnet"
 
 	print("SUMMARY passed=%d failed=%d" % [passed, failed])
 	quit(1 if failed > 0 else 0)

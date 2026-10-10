@@ -53,3 +53,13 @@ func effect_sum(key: String) -> int:
 		if level(StringName(def["id"])) > 0 and def["effect"].has(key):
 			total += int(def["effect"][key]) * level(StringName(def["id"]))
 	return total
+
+
+## Восстановление купленных уровней из сохранения (CM-R10) с клампом к
+## потолкам конфига — повреждённые значения не ломают правила.
+func restore_levels(levels: Dictionary) -> void:
+	_levels.clear()
+	for def in CMConfig.upgrades():
+		var id := StringName(def["id"])
+		var v := int(levels.get(String(id), 0))
+		_levels[id] = clampi(v, 0, int(def["max_levels"]))

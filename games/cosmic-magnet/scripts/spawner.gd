@@ -17,10 +17,31 @@ var _defs_cache: Array = []
 func _ready() -> void:
 	game = get_parent() as MainGame
 	_defs_cache = CMConfig.items()
-	# Начальное заполнение — детерминированный микс по весам (50/30/20).
+	_fill_field()
+	game.notify_field_changed()
+
+
+## Первичное заполнение: микс по весам + уникальная находка, если она ещё
+## не собрана в этом забеге (CM-R08: не возрождается после сбора).
+func _fill_field() -> void:
+	var cap := CMConfig.i("field.max_items")
+	var relic_spawned := false
+	var relic: Dictionary = CMConfig.unique_item()
+	if not relic.is_empty() and not game.unique_collected:
+		_spawn_item(relic, true)
+		relic_spawned = true
 	var schedule := _initial_schedule()
-	for i in mini(CMConfig.i("field.max_items"), schedule.size()):
+	for i in mini(cap - (1 if relic_spawned else 0), schedule.size()):
 		_spawn_item(schedule[i])
+
+
+## Сброс поля для новой игры (меню): всё очищается и заполняется заново.
+func reset_field() -> void:
+	for c in get_children():
+		if c is SalvageItem:
+			c.free()
+	_respawn_queue.clear()
+	_fill_field()
 	game.notify_field_changed()
 
 
@@ -86,12 +107,13 @@ func _pick_type() -> Dictionary:
 	return pool[0]
 
 
-func _spawn_item(type_def: Dictionary) -> void:
-	if _field_count() >= CMConfig.i("field.max_items"):
+func _spawn_item(type_def: Dictionary, unique := false) -> void:
+	if _field_count() >= CMConfig.i("field.max_items") and not unique:
 		return
 	var item := SalvageItem.new()
 	item.game = game
 	item.setup(type_def)
+	item.is_unique = unique
 	item.position = _random_spawn_position()
 	add_child(item)
 

@@ -91,6 +91,23 @@ jobs:
             exit 1
           fi
 
+      - name: Tests (save)
+        working-directory: games/cosmic-magnet
+        run: |
+          set -o pipefail
+          "$HOME/godot/godot" --headless --path . --script tests/test_save.gd 2>&1 | tee test-save.log
+          # Тест намеренно скармливает движку битый JSON (проверка восстановления
+          # из бакапа) — его ожидаемый шум 'ERROR: Parse JSON failed' не считается
+          # сбоем; любые другие SCRIPT ERROR/ERROR остаются фатальными.
+          if grep -E "SCRIPT ERROR|ERROR:" test-save.log | grep -v "Parse JSON failed"; then
+            echo "::error::unexpected errors found in save test log"
+            exit 1
+          fi
+          if ! grep -q "SUMMARY passed=.* failed=0" test-save.log; then
+            echo "::error::save test summary missing or has failures"
+            exit 1
+          fi
+
       - name: Upload logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
@@ -101,6 +118,7 @@ jobs:
             games/cosmic-magnet/smoke.log
             games/cosmic-magnet/test.log
             games/cosmic-magnet/test-economy.log
+            games/cosmic-magnet/test-save.log
           if-no-files-found: ignore
 
   gameplay-video:
