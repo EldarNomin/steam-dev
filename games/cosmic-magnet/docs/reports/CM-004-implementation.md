@@ -27,7 +27,7 @@
 |---|---|---|
 | Import / smoke / 3 suites (локально, на `987ae74`) | PASS | `--headless --path . --editor --import` exit 0; `--quit-after 120` exit 0; `--script tests/test_core.gd` → 37/37; `--script tests/test_economy.gd` → 61/61; `--script tests/test_save.gd` → 60/60 |
 | Пресет распознаётся | PASS | локально на `987ae74`: `NoSuchPreset` → «Invalid export preset name»; `Windows Desktop` → ошибка отсутствия шаблонов (шаблоны ставит CI) |
-| Windows-run #1 (cache miss) | PASS | run **38073114861** (SHA `987ae74`): `Cache not found` → загрузка+SHA512 → установка шаблонов → export → smoke → success; артефакт 11677726373 |
+| Windows-run #1 (cache hit) | PASS | run **38073114861** (SHA `987ae74`): лог `cache hit (exe restored before step): True` → установка шаблонов из проверенного TPZ → export → smoke → success; артефакт 11677726373 (подпись cache miss исправлена Codex после чтения лога) |
 | Windows-run #2 (**cache hit**) | PASS | run **38073498841** (SHA `987ae74`): лог — `Cache hit for: godot-4.5.1-win64-and-templates`, `cache hit (exe restored before step): True`; шаблоны установлены из кешированного TPZ; export → smoke → success |
 | Состав ZIP run #2 | PASS | скачан артефакт **11677846540** (36 659 366 байт): ровно два файла — `CosmicMagnet.exe` 98 470 104 байт, `CosmicMagnet.console.exe` 88 064 байт |
 | Запуск билда на Windows без Godot | PASS (частично: старт/окно; игровой цикл и сохранение этим запуском не проверялись) | артефакт 11677846540 скачан локально (Windows 10 x64, Godot не установлен в PATH); `CosmicMagnet.exe` запущен двойным запуском процесса — процесс жил, окно «Cosmic Magnet» открыто, затем остановлен вручную |
