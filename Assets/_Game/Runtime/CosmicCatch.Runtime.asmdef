@@ -1,0 +1,8 @@
+{
+  "name": "CosmicCatch.Runtime",
+  "rootNamespace": "CosmicCatch",
+  "references": [
+    "Unity.InputSystem"
+  ],
+  "autoReferenced": true
+}

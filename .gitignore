@@ -48,3 +48,9 @@ Desktop.ini
 !ProjectSettings/ProjectVersion.txt
 !Packages/manifest.json
 !Packages/packages-lock.json
+
+# DEV-001 runner and local validation
+Reports/
+*.slnx
+*.unityproj
+__pycache__/
