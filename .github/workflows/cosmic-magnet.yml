@@ -203,30 +203,36 @@ jobs:
 
       - name: Download and verify Godot with export templates
         shell: pwsh
+        env:
+          GODOT_EXE: ${{ github.workspace }}\..\.godot-tool\Godot_v4.5.1-stable_win64_console.exe
         run: |
           New-Item -ItemType Directory -Force -Path "$HOME\godot-cache" | Out-Null
           $godotZip = "$HOME\godot-cache\godot.zip"
           $templates = "$HOME\godot-cache\templates.tpz"
-          if (-not (Test-Path "$HOME\godot-cache\godot.exe")) {
-            curl.exe -sL -o $godotZip "https://github.com/godotengine/godot/releases/download/$env:GODOT_VERSION-stable/Godot_v$($env:GODOT_VERSION)-stable_win64.exe.zip"
+          $tool = "$HOME\godot-cache\tool"
+          "GODOT_EXE=$env:GODOT_EXE" | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8
+          if (-not (Test-Path $env:GODOT_EXE)) {
+            curl.exe -sL -o $godotZip "https://github.com/godotengine/godot/releases/download/$($env:GODOT_VERSION)-stable/Godot_v$($env:GODOT_VERSION)-stable_win64.exe.zip"
             curl.exe -sL -o $templates "https://github.com/godotengine/godot/releases/download/$($env:GODOT_VERSION)-stable/Godot_v$($env:GODOT_VERSION)-stable_export_templates.tpz"
             $h1 = (Get-FileHash -Algorithm SHA512 $godotZip).Hash
             $h2 = (Get-FileHash -Algorithm SHA512 $templates).Hash
             if ($h1 -ne $env:GODOT_SHA512) { throw "godot.zip SHA512 mismatch: $h1" }
             if ($h2 -ne $env:TEMPLATES_SHA512) { throw "templates.tpz SHA512 mismatch: $h2" }
-            Expand-Archive -Force $godotZip "$HOME\godot-cache\tool"
-            Move-Item -Force "$HOME\godot-cache\tool\Godot_v$($env:GODOT_VERSION)-stable_win64_console.exe" "$HOME\godot-cache\godot.exe"
+            Expand-Archive -Force $godotZip $tool
             Expand-Archive -Force $templates "$HOME\godot-cache\tpz"
             New-Item -ItemType Directory -Force -Path "$env:APPDATA\Godot\export_templates" | Out-Null
+            if (Test-Path "$env:APPDATA\Godot\export_templates\$($env:GODOT_VERSION).stable") {
+              Remove-Item -Recurse -Force "$env:APPDATA\Godot\export_templates\$($env:GODOT_VERSION).stable"
+            }
             Move-Item -Force "$HOME\godot-cache\tpz\templates" "$env:APPDATA\Godot\export_templates\$($env:GODOT_VERSION).stable"
           }
-          & "$HOME\godot-cache\godot.exe" --version
+          & $env:GODOT_EXE --version
 
       - name: Import project
         working-directory: games/cosmic-magnet
         shell: pwsh
         run: |
-          & "$HOME\godot-cache\godot.exe" --headless --path . --editor --import 2>&1 | Tee-Object -FilePath import.log
+          & $env:GODOT_EXE --headless --path . --editor --import 2>&1 | Tee-Object -FilePath import.log
           if (Select-String -Path import.log -Pattern "SCRIPT ERROR" -Quiet) { throw "script errors during import" }
 
       - name: Export release build
@@ -234,7 +240,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path build | Out-Null
-          & "$HOME\godot-cache\godot.exe" --headless --path . --export-release "Windows Desktop" build/CosmicMagnet.exe 2>&1 | Tee-Object -FilePath export.log
+          & $env:GODOT_EXE --headless --path . --export-release "Windows Desktop" build/CosmicMagnet.exe 2>&1 | Tee-Object -FilePath export.log
           if (Select-String -Path export.log -Pattern "SCRIPT ERROR|ERROR:" -Quiet) { throw "errors during export" }
           Get-ChildItem build
 
