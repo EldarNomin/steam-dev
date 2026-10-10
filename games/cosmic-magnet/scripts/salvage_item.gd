@@ -17,6 +17,8 @@ var color := Color.WHITE
 var collected := false
 ## Уникальная находка (CM-R08): спавнится один раз за забег, не возрождается.
 var is_unique := false
+var cover_id := -1
+var discovery: StringName = &""
 
 var _hint := ""
 ## Чисто визуальные поля: фаза бобинга и сила притяжения (0..1) для анимации.
@@ -30,7 +32,7 @@ func setup(type_def: Dictionary) -> void:
 	price = int(type_def.get("price", 1))
 	visual_radius = float(type_def.get("radius", 7.0))
 	color = type_def.get("color", Color.WHITE)
-	rotation = randf() * TAU
+	rotation = 0.0 if item_id == &"skiff" else randf() * TAU
 	_phase = randf() * TAU
 
 
@@ -41,7 +43,8 @@ func _physics_process(delta: float) -> void:
 func step(delta: float) -> void:
 	if collected or game == null:
 		return
-	rotation += 0.4 * delta
+	if item_id != &"skiff":
+		rotation += 0.4 * delta
 	_pull = maxf(_pull - delta * 2.0, 0.0)
 	# Поле заморожено вне вылета (DOCK/меню): ничто не ползёт к скрытому магниту.
 	if game.state != MainGame.GameState.SALVAGE:
@@ -58,7 +61,11 @@ func step(delta: float) -> void:
 	# превышает ёмкость).
 	var can_lift := required_strength <= magnet_node.strength
 	# Уникальная находка не занимает груз — гейт ёмкости к ней не применяется.
-	var fits := game.can_take(mass) or is_unique
+	var fits := game.can_take(mass) or (is_unique and discovery != &"skiff")
+	if discovery != &"" and game.site != null and not game.site.can_collect(self):
+		_hint = "MODULE?" if discovery == &"skiff" and not game.site.module_found else "PULSE?" if discovery == &"skiff" and not game.pulse.unlocked() else "FULL" if not fits else "S%d?" % required_strength
+		queue_redraw()
+		return
 	_hint = ""
 	if not can_lift and dist <= magnet_node.attraction_radius:
 		_hint = "S%d?" % required_strength
@@ -68,11 +75,17 @@ func step(delta: float) -> void:
 		queue_redraw()
 		return
 
+	if discovery == &"skiff" and not game.pulse.affects(self):
+		_hint = "PULSE"
+		queue_redraw()
+		return
+
 	if dist <= CMConfig.f("magnet.capture_radius"):
 		_collect()
 		return
 
-	if dist > magnet_node.attraction_radius:
+	var pulsed := game.pulse != null and game.pulse.affects(self)
+	if dist > magnet_node.attraction_radius and not pulsed:
 		queue_redraw()
 		return
 
@@ -85,9 +98,12 @@ func step(delta: float) -> void:
 		CMConfig.f("magnet.item_speed_min"),
 	)
 	speed = clampf(speed, CMConfig.f("magnet.item_speed_min"), CMConfig.f("magnet.item_speed_max"))
+	if pulsed:
+		speed = minf(speed * CMConfig.f("pulse.speed_multiplier"), CMConfig.f("pulse.max_speed"))
 	# Визуальный отклик: предмет «оживает» на притяжении — крутится быстрее.
 	_pull = clampf(_pull + delta * 3.0, 0.0, 1.0)
-	rotation += delta * 1.8 * _pull
+	if item_id != &"skiff":
+		rotation += delta * 1.8 * _pull
 	# Кламп остатком дистанции: предмет не пролетает сквозь магнит ни при каком delta.
 	var move := minf(speed * delta, dist - CMConfig.f("magnet.capture_radius") * 0.5)
 	move = maxf(move, 0.0)
@@ -121,9 +137,11 @@ const ART := {
 func _draw() -> void:
 	var t := Time.get_ticks_msec() / 1000.0
 	var size := visual_radius * 3.8 * (1.0 + 0.10 * _pull)
-	var texture: Texture2D = ART.get(item_id, ART[&"nut"])
+	var texture: Texture2D = preload("res://assets/art/derelict.webp") if item_id == &"skiff" else ART.get(item_id, ART[&"nut"])
 	# Мягкий бобинг поверх геймплейной позиции (только отрисовка).
 	draw_set_transform(Vector2(0.0, sin(t * 1.7 + _phase) * 2.5), rotation, Vector2.ONE)
+	if cover_id >= 0:
+		draw_arc(Vector2.ZERO, size * 0.65, -PI/4, PI*1.25, 32, Color(0.95,0.72,0.4,0.65), 1.2, true)
 	if is_unique:
 		var pulse := 1.0 + 0.12 * sin(t * 2.2)
 		for i in range(4, 0, -1):
@@ -134,7 +152,8 @@ func _draw() -> void:
 			var angle := t * 1.9 + float(i) * TAU / 3.0 + _phase
 			var orbit := size * (1.05 + 0.08 * sin(t * 2.6 + float(i)))
 			draw_circle(Vector2.from_angle(angle) * orbit, 1.8, Color(1.0, 0.85, 0.45, 0.85))
-	draw_texture_rect(texture, Rect2(Vector2.ONE * -size * 0.5, Vector2.ONE * size), false)
+	var art_size := Vector2(size*1.8, size*0.72) if item_id == &"skiff" else Vector2.ONE*size
+	draw_texture_rect(texture, Rect2(-art_size*0.5, art_size), false)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	if _hint != "":
 		# Cancel object rotation so the requirement is always readable.

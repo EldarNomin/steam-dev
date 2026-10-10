@@ -283,7 +283,7 @@ func _test_relic_payout_survives_midflight_exit() -> void:
 	game.launch()
 	var relic: SalvageItem = null
 	for c in game.spawner.get_children():
-		if c is SalvageItem and c.is_unique:
+		if c is SalvageItem and c.is_unique and c.discovery == &"":
 			relic = c
 	if relic == null:
 		_check(false, "relic payout: relic present in fresh run", "")
@@ -314,7 +314,7 @@ func _test_relic_payout_survives_midflight_exit() -> void:
 		"relic payout: restored after reload", "scrap=%d" % game3.economy.scrap)
 	var relic2: SalvageItem = null
 	for c in game3.spawner.get_children():
-		if c is SalvageItem and c.is_unique:
+		if c is SalvageItem and c.is_unique and c.discovery == &"":
 			relic2 = c
 	_check(relic2 == null, "relic payout: no relic after restart of the same run", "")
 	game.queue_free()
@@ -328,7 +328,7 @@ func _test_unique_find_not_duplicated() -> void:
 	game.new_game()
 	var relic: SalvageItem = null
 	for c in game.spawner.get_children():
-		if c is SalvageItem and c.is_unique:
+		if c is SalvageItem and c.is_unique and c.discovery == &"":
 			relic = c
 	_check(relic != null, "unique: relic present in a fresh run", "")
 	game.launch()
@@ -342,14 +342,14 @@ func _test_unique_find_not_duplicated() -> void:
 	game2.continue_game()
 	var relic2: SalvageItem = null
 	for c in game2.spawner.get_children():
-		if c is SalvageItem and c.is_unique:
+		if c is SalvageItem and c.is_unique and c.discovery == &"":
 			relic2 = c
 	_check(relic2 == null and game2.unique_collected,
 		"unique: no relic after restart of the same run", "")
 	game2.new_game()
 	var relic3: SalvageItem = null
 	for c in game2.spawner.get_children():
-		if c is SalvageItem and c.is_unique:
+		if c is SalvageItem and c.is_unique and c.discovery == &"":
 			relic3 = c
 	_check(relic3 != null, "unique: a brand-new run offers the relic again", "")
 	game2.queue_free()

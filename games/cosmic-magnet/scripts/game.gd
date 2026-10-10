@@ -17,6 +17,9 @@ const DEFAULT_VOLUME := 0.8
 
 var state: GameState = GameState.DOCK
 var economy := Economy.new()
+var pulse: PulseController
+var pulse_button: Button
+var site: SalvageSite
 var is_paused := false
 
 var charge := 0.0
@@ -86,6 +89,13 @@ func _ready() -> void:
 	volume_slider.value_changed.connect(_on_volume_changed)
 	# Штатное закрытие окна проходит через handle_close_request (CM-R11).
 	get_tree().auto_accept_quit = false
+	pulse = PulseController.new()
+	pulse.name = "PulseController"
+	add_child(pulse)
+	site = SalvageSite.new()
+	site.name = "SalvageSite"
+	add_child(site)
+	move_child(site, 0)
 	_show_menu()
 	queue_redraw()
 	notify_hud()
@@ -116,6 +126,8 @@ func _draw() -> void:
 
 func _process(_delta: float) -> void:
 	queue_redraw()
+	if site != null:
+		site.queue_redraw()
 
 
 func _physics_process(delta: float) -> void:
@@ -168,6 +180,8 @@ func request_return() -> void:
 	if state != GameState.SALVAGE:
 		return
 	state = GameState.DOCK
+	if pulse != null:
+		pulse.reset()
 	magnet.visible = false
 	unload()
 
@@ -202,10 +216,20 @@ func register_collection(item: SalvageItem) -> void:
 		return
 	if cargo_mass + item.mass > capacity():
 		return
+	if item.discovery != &"" and (site == null or not site.can_collect(item)):
+		return
+	if item.discovery == &"skiff" and not pulse.affects(item):
+		return
 	item.collected = true
 	if has_node("Presentation"):
-		$Presentation.collected(item.position, item.price, item.is_unique)
+		$Presentation.collected(item.position, CMConfig.i("site.skiff_reward") if item.discovery == &"skiff" else item.price, item.is_unique, "CHAIN ONLINE" if item.discovery == &"module" else "")
 	collected_count += 1
+	if site != null:
+		site.collected(item)
+	if item.discovery != &"":
+		item.queue_free()
+		notify_hud()
+		return
 	if tutorial_stage < 2:
 		tutorial_stage = 2
 	if item.is_unique:
@@ -273,6 +297,10 @@ func _update_shop() -> void:
 		var visual_titles := {&"strength": "MAGNET STRENGTH", &"radius": "ATTRACTION RADIUS", &"capacity": "CARGO CAPACITY"}
 		btn.text = "%s  %d\n%d SCRAP  ·  UPGRADE" % [visual_titles[id], lvl, cost] if not at_max else "%s  %d\nMAX LEVEL" % [visual_titles[id], lvl]
 		btn.disabled = not in_dock or at_max or economy.scrap < cost
+	if pulse_button != null:
+		var owned := economy.level(&"pulse") > 0
+		pulse_button.text = "PULSE  /  INSTALLED" if owned else "MAGNETIC PULSE  ·  %d SCRAP" % economy.upgrade_cost(&"pulse")
+		pulse_button.disabled = not in_dock or not economy.can_buy(&"pulse")
 	launch_button.visible = in_dock
 	return_button.visible = not in_dock
 
@@ -310,9 +338,9 @@ func _update_tutorial() -> void:
 		2:
 			tutorial_label.text = "Full cargo or empty charge returns you to dock and unloads."
 		3:
-			tutorial_label.text = "Buy MAGNET STRENGTH — level 2 unlocks batteries and the glowing relic."
+			tutorial_label.text = "Try MAGNETIC PULSE — hold LMB, then release to pull a group."
 		4:
-			tutorial_label.text = "LAUNCH! Batteries and the relic are within reach now."
+			tutorial_label.text = "LAUNCH! Hold LMB → release for a pulse." if economy.level(&"pulse") > 0 else "LAUNCH! Batteries and the relic are within reach now."
 		_:
 			tutorial_label.visible = false
 
@@ -320,6 +348,8 @@ func _update_tutorial() -> void:
 # --- Меню и сохранение (CM-R10–R12) ---
 
 func _show_menu() -> void:
+	if pulse != null:
+		pulse.reset()
 	menu_visible = true
 	main_menu.visible = true
 	new_game_confirm.visible = false
@@ -346,6 +376,8 @@ func continue_game() -> void:
 	tutorial_stage = int(data.get("tutorial_stage", 0))
 	var settings: Dictionary = data.get("settings", {})
 	_set_volume(float(settings.get("master_volume", DEFAULT_VOLUME)), false)
+	if site != null:
+		site.restore(data.get("hook", {}))
 	_start_run()
 
 
@@ -367,6 +399,8 @@ func confirm_new_game() -> void:
 
 
 func new_game() -> void:
+	if site != null:
+		site.reset()
 	economy = Economy.new()
 	unique_collected = false
 	tutorial_stage = 0
@@ -382,6 +416,8 @@ func new_game() -> void:
 
 
 func _start_run() -> void:
+	if pulse != null:
+		pulse.reset(true)
 	menu_visible = false
 	main_menu.visible = false
 	new_game_confirm.visible = false
@@ -395,6 +431,8 @@ func _start_run() -> void:
 	# Поле пересобирается под параметры забега: реликвия есть только если
 	# она ещё не собрана (CM-R08).
 	spawner.reset_field()
+	if site != null:
+		site.rebuild()
 	notify_hud()
 
 
@@ -410,6 +448,8 @@ func save_on_exit() -> void:
 	if is_paused:
 		toggle_pause()
 	state = GameState.DOCK
+	if pulse != null:
+		pulse.reset()
 	cargo_mass = 0
 	cargo_value = 0
 	magnet.visible = false
@@ -433,6 +473,7 @@ func save_now() -> void:
 		"unique_collected": unique_collected,
 		"tutorial_stage": tutorial_stage,
 		"settings": {"master_volume": master_volume},
+		"hook": site.snapshot() if site != null else {},
 	})
 
 
@@ -454,6 +495,8 @@ func _set_volume(v: float, persist: bool) -> void:
 func toggle_pause() -> void:
 	if menu_visible:
 		return
+	if pulse != null:
+		pulse.cancel()
 	is_paused = not is_paused
 	get_tree().paused = is_paused
 	pause_overlay.visible = is_paused
