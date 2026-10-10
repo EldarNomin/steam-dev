@@ -1,2 +1,6 @@
 # Godot generates this cache on import; never commit it.
 .godot/
+
+# Playtest/release builds (CM-004) — binaries stay out of git;
+# CI uploads them as artifacts instead.
+build/
