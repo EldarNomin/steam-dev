@@ -213,6 +213,8 @@ func register_collection(item: SalvageItem) -> void:
 	collected_count += 1
 	if site != null:
 		site.collected(item)
+	if item.discovery == &"skiff" and has_node("Presentation"):
+		$Presentation.rescued(item.position)
 	if item.discovery != &"":
 		item.queue_free()
 		notify_hud()
@@ -403,6 +405,8 @@ func new_game() -> void:
 
 
 func _start_run() -> void:
+	if has_node("Presentation"):
+		$Presentation.reset_feedback()
 	if pulse != null:
 		pulse.reset(true)
 	menu_visible = false

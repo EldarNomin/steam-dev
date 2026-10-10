@@ -136,7 +136,7 @@ func objective() -> String:
 	if module_found:
 		if released.size() < CMConfig.i("site.clamp_count"):
 			return "BREAK THE MOORINGS  /  aim at a cyan relay → chain pulse  %d / %d" % [released.size(),CMConfig.i("site.clamp_count")]
-		return "TOW TO THE BEACON  /  pulse near skiff, move toward EXIT  /  %d%%" % tow_progress()
+		return "TOW TO THE BEACON  /  leave %d cargo free · pulse beside skiff · lead toward EXIT  /  %d%%" % [CMConfig.i("site.skiff_mass"),tow_progress()]
 	if cleared.size() == CMConfig.i("site.cover_count"):
 		return "SIGNAL UNCOVERED  /  collect the golden module"
 	return "UNCOVER THE SIGNAL  /  clear marked debris  %d / %d" % [cleared.size(), CMConfig.i("site.cover_count")]
@@ -149,13 +149,35 @@ func _draw() -> void:
 		draw_line(effect["from"],effect["to"],tint,3,true)
 		draw_arc(effect["to"],20+(0.5-float(effect["life"]))*60,0,TAU,32,tint,2,true)
 	var exit := extraction_pos()
-	draw_circle(exit, CMConfig.f("site.extraction_radius"),Color(0.2,1,0.7,0.05))
-	draw_arc(exit, CMConfig.f("site.extraction_radius"),0,TAU,48,Color(0.3,1,0.8,0.7),2,true)
-	draw_string(ThemeDB.fallback_font,exit+Vector2(-42,-52),"EXIT BEACON",HORIZONTAL_ALIGNMENT_CENTER,84,12,Color("62e7d4"))
+	var ready_to_tow := module_found and released.size() == CMConfig.i("site.clamp_count")
+	var beacon_color := Color("62e7d4") if ready_to_tow else Color("496472")
+	var radius := CMConfig.f("site.extraction_radius")
+	draw_circle(exit,radius,Color(0.2,1,0.7,0.04 if ready_to_tow else 0.015))
+	draw_arc(exit,radius,0,TAU,48,beacon_color,2,true)
+	for sign_x in [-1,1]:
+		for sign_y in [-1,1]:
+			var corner := exit+Vector2(sign_x,sign_y)*radius
+			draw_line(corner,corner-Vector2(sign_x*12,0),beacon_color,3,true)
+			draw_line(corner,corner-Vector2(0,sign_y*12),beacon_color,3,true)
+	draw_string(ThemeDB.fallback_font,exit+Vector2(-65,-55),"EXIT / RESCUE BAY",HORIZONTAL_ALIGNMENT_CENTER,130,12,beacon_color)
 	if module_found and not skiff_recovered:
 		for obj in hardware:
 			if is_instance_valid(obj) and not obj.collected and obj.discovery == &"clamp":
-				draw_line(obj.position,skiff_location,Color(1,0.5,0.25,0.5),2,true)
+				var relay_pos := obj.position+Vector2(CMConfig.f("site.relay_offset_x"),0)
+				draw_line(relay_pos,obj.position,Color(0.35,0.85,0.85,0.35),2,true)
+				draw_line(obj.position,skiff_location,Color(1,0.5,0.25,0.32),2,true)
+		if ready_to_tow:
+			# Direction cue, not a force or an automatic movement path.
+			var direction := (exit-skiff_location).normalized()
+			var distance := skiff_location.distance_to(exit)
+			for index in 5:
+				var fraction := (float(index)+0.6)/5.6
+				var pos := skiff_location+direction*distance*fraction
+				if pos.distance_to(exit) < radius+15 or pos.distance_to(skiff_location) < 50:
+					continue
+				var side := direction.orthogonal()*5
+				draw_line(pos-direction*6+side,pos,Color(0.38,0.91,0.81,0.5),2,true)
+				draw_line(pos-direction*6-side,pos,Color(0.38,0.91,0.81,0.5),2,true)
 	if not module_found:
 		var progress := float(cleared.size()) / CMConfig.i("site.cover_count")
 		draw_arc(module_pos,CMConfig.f("site.radius"),0,TAU,64,Color(0.5,0.85,0.8,0.12),1,true)

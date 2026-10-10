@@ -17,6 +17,10 @@ var pulse_hint: Label
 var objective_hint: Label
 var completion: ColorRect
 var completion_seen := false
+var end_panel: Panel
+var rescue_remaining := 0.0
+var rescue_origin := Vector2.ZERO
+const RESCUE_DURATION := 1.1
 
 func _ready() -> void:
 	game = get_parent() as MainGame
@@ -138,7 +142,7 @@ func _configure() -> void:
 	completion.size = Vector2(1280, 720)
 	completion.visible = false
 	ui.add_child(completion)
-	var end_panel := Panel.new()
+	end_panel = Panel.new()
 	end_panel.position = Vector2(340, 210)
 	end_panel.size = Vector2(600, 300)
 	end_panel.add_theme_stylebox_override("panel", _box(Color("0b202d"), GOLD, 12))
@@ -183,6 +187,8 @@ func _configure() -> void:
 	# Existing confirmation panel was shorter than its cancel button.
 	game.new_game_confirm.get_node("ConfirmPanel").size.y = 230
 	game.tutorial_label.add_theme_font_size_override("font_size", 15)
+	# Pause controls must remain above the full-screen completion interceptor.
+	ui.move_child(game.pause_overlay,ui.get_child_count()-1)
 	_configured = true
 	game.notify_hud()
 
@@ -191,6 +197,7 @@ func _process(delta: float) -> void:
 		return
 	objective_hint.visible = not game.menu_visible
 	objective_hint.text = game.site.objective()
+	advance_rescue(delta)
 	if not game.site.skiff_recovered:
 		completion_seen = false
 		completion.hide()
@@ -199,6 +206,11 @@ func _process(delta: float) -> void:
 		completion.show()
 	if game.menu_visible:
 		completion.hide()
+	# The overlay still intercepts clicks as before; only its reveal is animated.
+	var reveal := 1.0 - rescue_remaining / RESCUE_DURATION
+	completion.color.a = 0.85 * reveal
+	end_panel.visible = rescue_remaining <= 0.4
+	end_panel.modulate.a = clampf(1.0 - rescue_remaining / 0.4, 0.0, 1.0)
 	pulse_hint.visible = not game.menu_visible
 	if game.pulse != null:
 		if not game.pulse.unlocked():
@@ -259,7 +271,37 @@ func collected(pos: Vector2, value: int, unique: bool, text := "") -> void:
 		popups.append({"pos": pos, "value": value, "text":text if text != "" else "+%d" % value, "life": 0.8, "color": tint})
 	queue_redraw()
 
+func rescued(pos: Vector2) -> void:
+	# Called only after the real collection/reward/save, never when loading a save.
+	rescue_origin = pos
+	rescue_remaining = RESCUE_DURATION
+	queue_redraw()
+
+func advance_rescue(delta: float) -> void:
+	if game.is_paused or game.menu_visible:
+		return
+	rescue_remaining = maxf(0.0, rescue_remaining - delta)
+
+func reset_feedback() -> void:
+	rescue_remaining = 0.0
+	completion_seen = false
+	sparks.clear()
+	popups.clear()
+	rings.clear()
+	if completion != null:
+		completion.hide()
+	queue_redraw()
+
 func _draw() -> void:
+	if rescue_remaining > 0.0:
+		var k := 1.0 - rescue_remaining / RESCUE_DURATION
+		var pos := rescue_origin.lerp(game.site.extraction_pos(),smoothstep(0.0,1.0,k))
+		var alpha := 1.0 - smoothstep(0.25,1.0,k)
+		var size := Vector2.ONE * lerpf(96.0,36.0,k)
+		draw_set_transform(pos,-PI/2)
+		draw_texture_rect(VoidArt.SKIFF,Rect2(-size/2,size),false,Color(0.65,1.0,0.9,alpha))
+		draw_set_transform(Vector2.ZERO)
+		draw_arc(game.site.extraction_pos(),42+k*70,0,TAU,64,Color(0.4,1,0.8,alpha),3,true)
 	for ring in rings:
 		var k: float = 1.0 - float(ring["life"]) / 0.38
 		var tint_r := Color(0.6, 1.0, 0.95, (1.0 - k) * 0.7)
