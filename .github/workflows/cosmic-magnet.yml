@@ -203,14 +203,13 @@ jobs:
 
       - name: Download and verify Godot with export templates
         shell: pwsh
-        env:
-          GODOT_EXE: ${{ github.workspace }}\..\.godot-tool\Godot_v4.5.1-stable_win64_console.exe
         run: |
           New-Item -ItemType Directory -Force -Path "$HOME\godot-cache" | Out-Null
           $godotZip = "$HOME\godot-cache\godot.zip"
           $templates = "$HOME\godot-cache\templates.tpz"
           $tool = "$HOME\godot-cache\tool"
-          "GODOT_EXE=$env:GODOT_EXE" | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8
+          $env:GODOT_EXE = "$tool\Godot_v4.5.1-stable_win64_console.exe"
+          "GODOT_EXE=$($env:GODOT_EXE)" | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8
           if (-not (Test-Path $env:GODOT_EXE)) {
             curl.exe -sL -o $godotZip "https://github.com/godotengine/godot/releases/download/$($env:GODOT_VERSION)-stable/Godot_v$($env:GODOT_VERSION)-stable_win64.exe.zip"
             curl.exe -sL -o $templates "https://github.com/godotengine/godot/releases/download/$($env:GODOT_VERSION)-stable/Godot_v$($env:GODOT_VERSION)-stable_export_templates.tpz"

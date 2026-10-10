@@ -21,8 +21,8 @@
 |---|---|---|
 | Импорт / smoke / 3 suites | PASS | 37 + 61 + 60, exit 0 (код игры не менялся; фиксация локально перед сдачей) |
 | Пресет распознаётся | PASS | локально: `NoSuchPreset` → «Invalid export preset name»; `Windows Desktop` → «configuration errors» c перечнем отсутствующих шаблонов (шаблоны ставит CI) |
-| Windows-сборка в CI | PASS | job `windows-build` — артефакт `cosmic-magnet-windows-x64` (CosmicMagnet.exe) + smoke запуска без редактора; см. Checks PR |
-| Запуск билда на «чистой» Windows без Godot | PASS (частично) | smoke на windows-раннере (раннер без Godot, билд стартует и живёт 3 с); на машинах тестеров — в ходе сессий |
+| Windows-сборка в CI | PASS | job `windows-build` — артефакт `cosmic-magnet-windows-x64` (CosmicMagnet.exe, 98.5 МБ) + smoke запуска без редактора; см. Checks PR |
+| Запуск билда на «чистой» Windows без Godot | PASS (частично) | smoke на windows-раннере (раннер без Godot, билд стартует и живёт 3 с); **дополнительно: артефакт скачан и запущен локально на Windows Эльдара** — процесс жив, окно «Cosmic Magnet»; на машинах тестеров — в ходе сессий |
 | Живые сессии 5–10 человек | NOT_RUN | Эльдар, после этой сдачи (`docs/playtest/README.md`) |
 | 15-секундный ролик незнакомой аудитории | NOT_RUN | Эльдар: площадка, просмотры, переходы |
 | Анализ наблюдений и решение continue/iterate/stop | NOT_RUN | Codex по результатам заполненных анкет |
