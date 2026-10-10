@@ -7,6 +7,7 @@ var phase := 0
 var aiming := Vector2(350,420)
 var pressed := false
 var dwell := 0
+var chain_captured := false
 func _initialize() -> void:
  run.call_deferred()
 func screen_pos(pos: Vector2) -> Vector2:
@@ -95,6 +96,9 @@ func run() -> void:
   if game.site.module_found and phase < 2:
    phase=2
    await screenshot("hook-module")
+  if game.site.released.size() == 1 and not chain_captured:
+   chain_captured=true
+   await screenshot("hook-chain")
   if game.site.released.size() == CMConfig.i("site.clamp_count") and phase < 3:
    phase=3
    await screenshot("hook-freed")
@@ -108,9 +112,10 @@ func run() -> void:
    await click(Vector2(1120,680 if game.state == MainGame.GameState.DOCK else 624))
   await physics_frame
  await process_frame
- await screenshot("hook-end")
+ await screenshot("hook-rescue")
  for frame in 240:
   await physics_frame
+ await screenshot("hook-end")
  print("PLAY_RESULT ticks=",ticks," shots=",game.pulse.shots," covers=",game.site.cleared.size()," module=",game.site.module_found," skiff=",game.site.skiff_recovered," scrap=",game.economy.scrap," released=",game.site.released.size()," tow=",game.site.tow_progress())
  SaveService.wipe_files()
  quit(0 if game.site.skiff_recovered else 1)

@@ -147,6 +147,12 @@ func _draw() -> void:
 			draw_rect(Rect2(-15,-11,6,22),Color("dc9362"))
 			draw_rect(Rect2(9,-11,6,22),Color("dc9362"))
 			draw_rect(Rect2(-9,-4,18,8),Color("9a7869"))
+		# Matching numbers distinguish puzzle hardware from ordinary pickups.
+		var tint := Color("62e7d4") if discovery == &"relay" else Color("efbd74")
+		draw_style_box(_hint_box(),Rect2(-8,-35,16,16))
+		draw_string(ThemeDB.fallback_font,Vector2(-7,-23),str(clamp_id+1),HORIZONTAL_ALIGNMENT_CENTER,14,11,tint)
+		if discovery == &"relay":
+			draw_arc(Vector2.ZERO,22,0,TAU,32,Color(0.38,0.91,0.81,0.55),1,true)
 		if game.magnet.position.distance_to(position) < 100 and game.state == MainGame.GameState.SALVAGE:
 			draw_string(ThemeDB.fallback_font,Vector2(-35,33),"RELAY" if discovery == &"relay" else "CLAMP",HORIZONTAL_ALIGNMENT_CENTER,70,11,Color("b8d6de"))
 		return
@@ -181,7 +187,7 @@ func _draw() -> void:
 	else:
 		draw_texture_rect(texture,Rect2(-Vector2.ONE*size/2,Vector2.ONE*size),false)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-	if _hint != "":
+	if _hint != "" and (discovery != &"skiff" or position.distance_to(game.magnet.position) < game.magnet.attraction_radius+60):
 		# Cancel object rotation so the requirement is always readable.
 		draw_set_transform(Vector2.ZERO, -rotation)
 		draw_style_box(_hint_box(), Rect2(-22, -size * 0.6 - 19, 44, 18))
