@@ -120,6 +120,26 @@
 		"skiff_y": 475,
 		"skiff_strength": 2,
 		"skiff_mass": 20,
-		"skiff_reward": 100
+		"skiff_reward": 100,
+		"clamp_count": 3,
+		"clamp_offsets": [
+			[
+				-80,
+				-110
+			],
+			[
+				-170,
+				0
+			],
+			[
+				-80,
+				110
+			]
+		],
+		"relay_offset_x": -60,
+		"extraction_x": 140,
+		"extraction_y": 220,
+		"extraction_radius": 42,
+		"tow_speed": 160
 	}
 }

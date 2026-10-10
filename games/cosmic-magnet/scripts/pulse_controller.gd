@@ -44,7 +44,9 @@ func begin(pos: Vector2) -> bool:
 func radius() -> float:
 	return game.magnet.attraction_radius * (1.0 + clampf(held / CMConfig.f("pulse.hold_max"), 0.0, 1.0))
 
-func eligible(item: Variant) -> bool:
+func eligible(item: Variant, chain := false) -> bool:
+	if is_instance_valid(item) and item is SalvageItem and item.discovery in [&"relay", &"clamp"]:
+		return not item.collected and not item.is_queued_for_deletion() and game.site.module_found and (item.discovery == &"relay" or chain)
 	return is_instance_valid(item) and item is SalvageItem and not item.collected and not item.is_queued_for_deletion() and item.required_strength <= game.magnet.strength and (item.is_unique or game.can_take(item.mass)) and (item.discovery == &"" or game.site.can_collect(item))
 
 func release(pos: Vector2) -> bool:
@@ -73,6 +75,8 @@ func release(pos: Vector2) -> bool:
 	active = CMConfig.f("pulse.duration")
 	cooldown = CMConfig.f("pulse.cooldown")
 	shots += 1
+	if game.site != null:
+		game.site.pulse_fired(chain_links)
 	queue_redraw()
 	return true
 
@@ -82,9 +86,11 @@ func add_chain_targets() -> void:
 	for hop in CMConfig.i("pulse.chain_hops"):
 		var next: Array[SalvageItem] = []
 		for child in game.spawner.get_children():
-			if not child is SalvageItem or targets.has(child) or not eligible(child):
+			if not child is SalvageItem or targets.has(child) or not eligible(child, true):
 				continue
 			for source in frontier:
+				if child.discovery == &"clamp" and (source.discovery != &"relay" or source.clamp_id != child.clamp_id):
+					continue
 				if child.position.distance_to(source.position) <= CMConfig.f("pulse.chain_radius"):
 					targets.append(child)
 					chain_links.append([source, child])
@@ -118,7 +124,10 @@ func step(delta: float) -> void:
 		cancel()
 		return
 	cooldown = maxf(0.0, cooldown - delta)
+	var was_active := active > 0.0
 	active = maxf(0.0, active - delta)
+	if was_active and active <= 0.0 and game.site != null and game.site.module_found:
+		game.save_now()
 	if holding:
 		held = minf(held + delta, CMConfig.f("pulse.hold_max"))
 	if active <= 0.0:

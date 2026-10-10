@@ -145,7 +145,46 @@ func run() -> void:
 	game._on_buy(&"pulse")
 	game._on_buy(&"strength")
 	game.launch()
-	check(game.site.can_collect(game.site.skiff_item), "strength two and installed pulse unlock skiff")
+	game.site.ensure_discoveries()
+	check(not game.site.can_collect(game.site.skiff_item), "ship remains anchored despite purchased equipment")
+	check(game.site.hardware.size() == 6 and game.spawner.field_count() <= 40, "three real relay and clamp pairs fit field cap")
+	var clamp: SalvageItem
+	var relay: SalvageItem
+	for obj in game.site.hardware:
+		if obj.clamp_id == 2:
+			if obj.discovery == &"clamp":
+				clamp = obj
+			else:
+				relay = obj
+	check(not pulse.eligible(clamp) and pulse.eligible(clamp,true), "clamp excluded from direct pulse seeds")
+	game.register_collection(clamp)
+	game.register_collection(relay)
+	check(not clamp.collected and not relay.collected, "hardware cannot be collected as ordinary scrap")
+	var relay_pos := relay.position
+	relay.step(30)
+	check(relay.position == relay_pos, "relay remains a fixed conductor")
+	pulse.reset(true)
+	game.magnet.position = relay_pos
+	pulse.begin(relay_pos)
+	pulse.step(0.8)
+	pulse.release(relay_pos)
+	check(game.site.released == [2], "chain releases the aimed relay rather than earlier field order")
+	game.save_on_exit()
+	game.continue_game()
+	check(game.site.released.size() == 1 and game.site.hardware.size() == 4, "released mooring persists without hardware respawn")
+	game.launch()
+	for connection in 2:
+		var next_relay: SalvageItem
+		for obj in game.site.hardware:
+			if is_instance_valid(obj) and not obj.collected and obj.discovery == &"relay":
+				next_relay = obj
+				break
+		pulse.step(4)
+		game.magnet.position = next_relay.position
+		pulse.begin(next_relay.position)
+		pulse.step(0.8)
+		pulse.release(next_relay.position)
+	check(game.site.released.size() == 3 and game.site.can_collect(game.site.skiff_item), "all three chain connections unlock towing")
 	game.cargo_mass = game.capacity()-19
 	check(not game.site.can_collect(game.site.skiff_item), "skiff respects twenty cargo mass")
 	game.cargo_mass = 0
@@ -181,6 +220,31 @@ func run() -> void:
 	pulse.step(0.8)
 	pulse.release(skiff.position)
 	game.register_collection(skiff)
+	check(not skiff.collected, "pulse at original ship location cannot finish extraction")
+	var old_position := skiff.position
+	game.magnet.position = old_position+Vector2(-150,0)
+	skiff.step(0.1)
+	check(is_equal_approx(skiff.position.distance_to(old_position),16.0), "towing respects configured speed")
+	pulse.step(0.8)
+	var checkpoint := skiff.position
+	skiff.step(0.1)
+	check(skiff.position == checkpoint, "ship stops when impulse expires")
+	game.save_on_exit()
+	game.continue_game()
+	skiff = game.site.skiff_item
+	check(skiff.position.is_equal_approx(checkpoint) and game.site.released.size() == 3, "tow position survives unfinished trip and reload")
+	game.launch()
+	pulse.reset(true)
+	game.magnet.position = skiff.position
+	pulse.begin(skiff.position)
+	pulse.step(0.8)
+	pulse.release(skiff.position)
+	game.toggle_pause()
+	skiff.step(1)
+	check(skiff.position.is_equal_approx(checkpoint), "pause prevents ship movement")
+	game.toggle_pause()
+	skiff.position = game.site.extraction_pos()
+	game.register_collection(skiff)
 	game.register_collection(skiff)
 	check(game.site.skiff_recovered and game.state == MainGame.GameState.DOCK and game.economy.scrap == money+100, "skiff rewards once and finishes in dock")
 	game.continue_game()
@@ -189,7 +253,21 @@ func run() -> void:
 	check(not SaveService.valid_hook({"cleared":[12],"module_found":false,"skiff_recovered":false}), "out of range cover rejected")
 	check(not SaveService.valid_hook({"cleared":[],"module_found":true,"skiff_recovered":false}), "premature module save rejected")
 	check(not SaveService.valid_hook({"cleared":[],"module_found":false,"skiff_recovered":true}), "premature completed save rejected")
+	var completed_legacy := game.site.snapshot()
+	completed_legacy.erase("released")
+	completed_legacy.erase("skiff_position")
+	game.site.restore(completed_legacy)
+	check(game.site.skiff_recovered and SaveService.valid_hook(game.site.snapshot()), "completed H01 profile migrates without reopening ship")
+	var bad := game.site.snapshot()
+	bad["released"] = [0,0]
+	check(not SaveService.valid_hook(bad), "duplicate moorings rejected")
+	bad = game.site.snapshot()
+	bad["skiff_position"] = [1200,900]
+	check(not SaveService.valid_hook(bad), "off-field ship save rejected")
+	bad["skiff_position"] = ["bad",220]
+	check(not SaveService.valid_hook(bad), "nonnumeric ship position rejected")
 	game.new_game()
+	check(game.site.released.is_empty() and game.site.skiff_location == game.site.skiff_pos, "new game resets tow and moorings")
 	check(game.site.cleared.is_empty() and not game.site.module_found and not game.site.skiff_recovered and not pulse.unlocked(), "new game resets whole hook")
 	var deleted: Variant = item(Vector2(300,250))
 	deleted.free()

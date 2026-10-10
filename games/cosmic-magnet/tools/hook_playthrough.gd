@@ -41,8 +41,10 @@ func run() -> void:
  while ticks < 7200 and not game.site.skiff_recovered:
   ticks += 1
   if ticks % 600 == 0:
-   print("PLAY_PROGRESS ticks=",ticks," covers=",game.site.cleared.size()," scrap=",game.economy.scrap," cargo=",game.cargo_mass)
+   print("PLAY_PROGRESS ticks=",ticks," covers=",game.site.cleared.size()," scrap=",game.economy.scrap," cargo=",game.cargo_mass," released=",game.site.released.size()," tow=",game.site.tow_progress()," shots=",game.pulse.shots)
   if game.state == MainGame.GameState.DOCK:
+   button(aiming,false)
+   pressed=false
    if not game.pulse.unlocked() and game.economy.can_buy(&"pulse"):
     await click(Vector2(1120,420))
    if game.pulse.unlocked() and game.magnet.strength < 2 and game.economy.can_buy(&"strength"):
@@ -52,7 +54,15 @@ func run() -> void:
    if game.cargo_mass > game.capacity()-20:
     await click(Vector2(1120,680 if game.state == MainGame.GameState.DOCK else 624))
     continue
-   aiming = game.site.skiff_item.position
+   if game.site.released.size() < CMConfig.i("site.clamp_count"):
+    for obj in game.site.hardware:
+     if is_instance_valid(obj) and not obj.collected and obj.discovery == &"relay":
+      aiming = obj.position
+      break
+   else:
+    var ship_pos := game.site.skiff_item.position
+    var direction := ship_pos.direction_to(game.site.extraction_pos())
+    aiming = ship_pos+direction*minf(170 if game.pulse.active > 0 else 70,ship_pos.distance_to(game.site.extraction_pos()))
   elif dwell <= 0:
    dwell = 60
    var best: SalvageItem
@@ -85,6 +95,12 @@ func run() -> void:
   if game.site.module_found and phase < 2:
    phase=2
    await screenshot("hook-module")
+  if game.site.released.size() == CMConfig.i("site.clamp_count") and phase < 3:
+   phase=3
+   await screenshot("hook-freed")
+  if game.site.tow_progress() >= 45 and phase < 4:
+   phase=4
+   await screenshot("hook-towing")
   # Manual dock when enough earned for the next required upgrade.
   if game.state == MainGame.GameState.SALVAGE and ((not game.pulse.unlocked() and game.economy.scrap+game.cargo_value >= 15) or (game.pulse.unlocked() and game.magnet.strength < 2 and game.economy.scrap+game.cargo_value >= 20)):
    button(aiming,false)
@@ -95,6 +111,6 @@ func run() -> void:
  await screenshot("hook-end")
  for frame in 240:
   await physics_frame
- print("PLAY_RESULT ticks=",ticks," shots=",game.pulse.shots," covers=",game.site.cleared.size()," module=",game.site.module_found," skiff=",game.site.skiff_recovered," scrap=",game.economy.scrap)
+ print("PLAY_RESULT ticks=",ticks," shots=",game.pulse.shots," covers=",game.site.cleared.size()," module=",game.site.module_found," skiff=",game.site.skiff_recovered," scrap=",game.economy.scrap," released=",game.site.released.size()," tow=",game.site.tow_progress())
  SaveService.wipe_files()
  quit(0 if game.site.skiff_recovered else 1)
